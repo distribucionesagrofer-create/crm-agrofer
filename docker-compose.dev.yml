@@ -1,0 +1,28 @@
+version: '3.9'
+
+# Solo bases de datos para desarrollo local
+# Corre con: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: drako2024
+      MONGO_INITDB_DATABASE: drakocrm
+    volumes:
+      - mongo-dev-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass drako2024
+    volumes:
+      - redis-dev-data:/data
+
+volumes:
+  mongo-dev-data:
+  redis-dev-data:

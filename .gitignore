@@ -1,0 +1,56 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno y secretos
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Sesiones de WhatsApp (cookies/llaves de autenticación de dispositivos vinculados reales)
+sessions/
+backend/sessions/
+
+# Media subida (datos del negocio, no código fuente)
+uploads/
+backend/uploads/
+
+# Build del frontend
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Configuración local de Claude Code (trae comandos con la contraseña de Mongo cacheada)
+.claude/settings.local.json
+
+# Archivos con credenciales reales del sistema principal (API key + contraseñas de
+# vendedores en texto plano) — NUNCA deben subir al repositorio, ni siquiera privado.
+ACCESO_SISTEMA_PRINCIPAL_COMPLETO.txt
+SISTEMA_PRINCIPAL_API.txt
+META_WHATSAPP_API_INVESTIGACION.txt
+
+# Binarios descargados, no son código del proyecto
+ngrok.exe
+
+# Caché de whatsapp-web.js (versiones del web client, se regenera solo)
+backend/.wwebjs_cache/
+.wwebjs_cache/
+.wwebjs_auth/
+
+# Certificados TLS — nunca deben subir al repositorio
+nginx/certs/*
+!nginx/certs/.gitkeep
+*.pem
+*.key
+*.crt
+*.pfx

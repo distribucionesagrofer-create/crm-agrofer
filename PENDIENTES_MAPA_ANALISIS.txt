@@ -1,0 +1,35 @@
+PENDIENTES — MAPA DE CLIENTES / ANÁLISIS GEOGRÁFICO
+Guardado: Junio 2026
+
+MEJORAS IDENTIFICADAS (implementar cuando se retome):
+
+1. CONVEX HULL POR VENDEDOR
+   - En vez de polígonos rectangulares hardcodeados, calcular el contorno
+     real que rodea los clientes GPS de cada vendedor
+   - Muestra el territorio real de cada uno y si se solapan
+   - Librería: @turf/convex (turf.js) o cálculo manual con los puntos lat/lng
+   - Los datos ya están: vendedorId + lat/lng en cada cliente
+
+2. ANÁLISIS POR BARRIO (el más poderoso)
+   - Agrupar los 3,755 clientes por campo 'barrio'
+   - Mostrar densidad de clientes por barrio con colores:
+     * Oscuro = mucha presencia
+     * Claro = poca presencia
+     * Sin color = 0 clientes = OPORTUNIDAD
+   - Los datos ya están: campo barrio en Customer model
+   - Backend: endpoint GET /api/clientes/stats-barrio
+     → devuelve { barrio, total, porVendedor: [] }
+   - Frontend: círculos o polígonos de barrio coloreados por densidad
+
+3. CLUSTERS EN VEZ DE PUNTOS INDIVIDUALES
+   - Con 706 puntos individuales el mapa se satura
+   - Librería: react-leaflet-cluster
+   - Al hacer zoom se separan en puntos individuales
+   - Muestra número en el cluster ("42 clientes en esta zona")
+
+4. VISTA "ZONAS SIN PRESENCIA"
+   - Toggle que muestre los barrios donde NO hay ningún cliente
+   - Ayuda a identificar oportunidades comerciales
+
+ESTADO: Pendiente de implementar
+DATOS DISPONIBLES: 3,755 clientes con barrio, 706 con GPS, lat/lng

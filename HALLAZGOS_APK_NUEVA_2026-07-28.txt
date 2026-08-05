@@ -1,0 +1,97 @@
+HALLAZGOS — Decompilación AgroferSis.apk (versión nueva, descargada 28/07/2026)
+================================================================================
+Herramienta usada: JADX 1.5.6 + JDK Temurin 17
+APK analizado: AgroferSis (1).apk — 13,125,801 bytes — descargado 28/07/2026 11:24
+(el anterior, AgroferSis.apk de 24/06/2026, 12,898,088 bytes, es la versión vieja)
+Fuente decompilada: scratchpad/apk_nuevo/sources/agrofer/online/reinaldo/agrofersis/
+(6,443 archivos .java generados, 123 errores parciales de decompilación — normal)
+
+================================================================================
+1. SOLUCIÓN AL PROBLEMA DE FOTOS DE PRODUCTOS (ya implementada en el CRM)
+================================================================================
+El sistema principal entrega FOTO_URL como ruta local de Windows del servidor:
+  T:\productosImagenes\{codigo}.png
+
+La app oficial arma la URL HTTP real así (ProductosCatalogoAdapter.java):
+  1. Toma el texto de FOTO_URL desde "productosImagenes" en adelante
+  2. Cambia \ por /
+  3. Le antepone: https://agrofer.link/sistemas/vistas/img/productos/
+
+URL final funcional:
+  https://agrofer.link/sistemas/vistas/img/productos/productosImagenes/{codigo}.png
+
+Verificado en vivo: HTTP 200, image/png, imagen real del producto.
+Ya implementado en backend/src/routes/productos-catalogo.js (función resolveFotoUrl).
+99.6% de los 4,262 productos tienen foto (4,246 con match).
+
+================================================================================
+2. MÓDULOS DE UI ENCONTRADOS (agrofer.online.reinaldo.agrofersis.ui.*)
+================================================================================
+cartera | clientes | despacho | dialog | historial | home | inspector | login |
+mapa | pedidos | productos | profile | recibos | reparto | seguimiento | visitas
+
+Notas por módulo relevante:
+- inspector: herramienta de debug interna (explora la BD local Room), NO es funcionalidad
+  de negocio, no llama a la API. Sin interés para el CRM.
+- seguimiento: seguimiento de estado de pedidos para el vendedor. Tiene v1 y v2 (StateFlow).
+  Construye un timeline visual (EstadoTimeline) según enum PedidoEstadoOperativo:
+  creado → despachado → en reparto → entregado / con novedad.
+  Incluye cliente, planilla, conductor, vehículo, novedades, totales e ítems.
+  >>> CANDIDATO FUERTE para traer al CRM — ver sección 4.
+- mapa: mapa de clientes asignados (OSMdroid, no Google Maps), con selección múltiple
+  para crear visitas comerciales masivas georreferenciadas.
+- despacho / reparto: ciclo completo de logística (cargue del camión, inicio y cierre
+  de ruta, devoluciones durante el reparto).
+
+No se encontró Firebase Cloud Messaging (push) en ningún lado del código — solo hay
+notificaciones locales de un foreground service de rastreo GPS (LocationTrackingService).
+
+================================================================================
+3. ACTIONS DE LA API REST — LISTA COMPLETA (comparada con lo que ya conocíamos)
+================================================================================
+Ya conocidas (documentadas antes de esta sesión):
+  get_clientes, get_productos, get_bancos, get_planillas_usuario, get_obsequios,
+  get_visitas_asignadas, get_facturas_pendientes, get_anticipos, get_cartera,
+  get_pedidos_usuario, get_recibos_usuario, sync_pedidos, sync_visitas,
+  registrar_entrega, registrar_novedad, cerrar_ruta, update_perfil, change_password
+
+NUEVAS, encontradas en esta decompilación (28/07/2026):
+  get_seguimiento_pedidos_vendedor_v2   → timeline de estado de un pedido (LA CLAVE)
+  get_estado_planilla_reparto           → estado de una planilla de reparto
+  get_detalle_planilla_reparto          → detalle de una planilla de reparto
+  cerrar_cargue_iniciar_ruta            → cierra el cargue del camión e inicia la ruta
+  registrar_devolucion_reparto          → registra una devolución durante el reparto
+  get_motivos_devolucion                → catálogo de motivos de devolución
+  get_despachos_directo                 → despachos que saltan el flujo normal de reparto
+  get_opciones_despacho_directo         → opciones/config de despacho directo
+  update_cliente_coords                 → actualiza coordenadas GPS de un cliente
+  get_user_profile                      → perfil del usuario logueado
+  update_profile                        → (variante moderna de update_perfil)
+  registrar_entrega_pedido              → (variante moderna de registrar_entrega)
+  registrar_novedad_pedido              → (variante moderna de registrar_novedad)
+  get_productos_factura_reparto         → productos de una factura en reparto
+  sync_hash                             → hash para detectar cambios antes de sincronizar
+                                           (mecanismo de sync incremental eficiente)
+
+================================================================================
+4. OPORTUNIDAD PRINCIPAL: Seguimiento de pedidos al estilo e-commerce
+================================================================================
+Idea: cuando un cliente hace un pedido, informarle por WhatsApp cada vez que cambia
+de etapa (creado → despachado → en reparto → entregado / con novedad), igual que
+un e-commerce (Mercado Libre, Amazon, etc.) le avisa al comprador.
+
+Fuente de datos: get_seguimiento_pedidos_vendedor_v2 (o el endpoint equivalente que
+haya para consultar por cliente/pedido en vez de por vendedor — falta confirmar si existe
+una variante "por cliente").
+
+Piezas que harían falta (pendiente de diseñar, NO implementado todavía):
+  - Job que consulte periódicamente el estado de pedidos activos y detecte cambios
+    de etapa (comparando contra el último estado guardado).
+  - Mapeo pedido → cliente → teléfono (ya tenemos teléfono de los 3,753 clientes
+    sincronizados desde get_clientes).
+  - Plantillas de mensaje por etapa (creado, despachado, en reparto, entregado, novedad).
+  - Decidir canal de envío: línea de WhatsApp normal (whatsapp-web.js) o Meta Cloud API
+    con message templates (más robusto para mensajes iniciados por el negocio, ya que
+    fuera de la ventana de 24h de conversación WhatsApp exige plantillas aprobadas).
+
+Este archivo es solo un registro de referencia — no se ha construido nada de la sección 4 todavía.
