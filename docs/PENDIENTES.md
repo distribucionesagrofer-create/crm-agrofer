@@ -2,6 +2,10 @@
 
 Ultima actualizacion: 2026-05-26
 
+> Nota: documento historico. Varios items (captura de datos por el bot, catalogo de
+> productos, flujos conectados al bot) ya se implementaron despues de esta fecha —
+> revisar el estado real en el codigo antes de asumir que algo sigue pendiente.
+
 ---
 
 ## PRIORIDAD ALTA

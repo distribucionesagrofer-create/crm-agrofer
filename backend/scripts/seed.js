@@ -21,6 +21,14 @@ async function seed() {
   const User   = require('../src/models/User')
   const Tenant = require('../src/models/Tenant')
 
+  const yaHayDatos = (await User.countDocuments({})) > 0 || (await Tenant.countDocuments({})) > 0
+  if (yaHayDatos && process.env.ALLOW_SEED_RESET !== 'true') {
+    console.log('Ya existen usuarios o vendedores en la base — no se borra nada.')
+    console.log('Corre con ALLOW_SEED_RESET=true si de verdad quieres reiniciarlos (esto borra TODOS los usuarios y vendedores actuales).')
+    await mongoose.disconnect()
+    return
+  }
+
   await User.deleteMany({})
   await Tenant.deleteMany({})
 
