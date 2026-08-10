@@ -71,7 +71,7 @@ app.use('/api/whatsapp',      require('./routes/whatsapp'))
 app.use('/api/knowledge',     require('./routes/knowledge'))
 app.use('/api/dashboard',     require('./routes/dashboard'))
 app.use('/api/quick-replies', require('./routes/quick-replies'))
-app.use('/api/campanas',      require('./routes/campanas'))
+app.use('/api/broadcasts',    require('./routes/broadcasts'))
 app.use('/api/leads',         require('./routes/leads'))
 app.use('/api/flujos',        require('./routes/flujos'))
 app.use('/api/importar-visitas', require('./routes/importar-visitas'))
@@ -174,8 +174,8 @@ const start = async () => {
   server.listen(PORT, () => {
     console.log(`Servidor en puerto ${PORT}`)
     autoReconnectWhatsApp()
-    // Iniciar scheduler de campañas programadas
-    require('./services/campana-scheduler.service').startCampanaScheduler(io)
+    // Iniciar scheduler de broadcasts programados (plantillas de Meta)
+    require('./services/broadcast-scheduler.service').startBroadcastScheduler(io)
     // Iniciar motor de follow-up (solo línea Meta — ver comentario en followup.service.js)
     setTimeout(() => {
       require('./services/followup.service').init()

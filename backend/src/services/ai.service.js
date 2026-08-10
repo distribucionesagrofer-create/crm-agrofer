@@ -13,10 +13,14 @@ async function analyzeMerchandisingImage(mediaUrl, caption = '') {
   const fs   = require('fs')
   const path = require('path')
 
-  const fileName   = mediaUrl.replace('/media/', '')
+  const fileName   = path.basename(mediaUrl.replace('/media/', ''))
   const uploadsDir = path.join(__dirname, '../../uploads')
   const filePath   = path.join(uploadsDir, fileName)
 
+  // path.basename() ya descarta cualquier separador de ruta, pero se valida explícito
+  // por si acaso — esto viene de input externo (WhatsApp o un endpoint HTTP autenticado)
+  // y no debe poder salirse de uploads/ (lectura arbitraria de archivos del servidor).
+  if (!filePath.startsWith(uploadsDir + path.sep)) throw new Error('Ruta de imagen inválida')
   if (!fs.existsSync(filePath)) throw new Error('Imagen no encontrada en disco')
 
   const buffer = fs.readFileSync(filePath)

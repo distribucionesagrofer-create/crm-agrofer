@@ -1,19 +1,21 @@
 const https = require('https')
 
-const SP_API_KEY = process.env.SP_API_KEY || '03790f0b03256b17c29367cd32a2dfb4e2ea045678118aed'
+const SP_API_KEY = process.env.SP_API_KEY
+if (!SP_API_KEY) throw new Error('SP_API_KEY no configurada en el entorno')
 
-// Credenciales de todos los vendedores
+// Vendedores del Sistema Principal — solo terid/uid (identificadores, no credenciales) se usan
+// para las llamadas a la API; la autenticación real es el Bearer token de SP_API_KEY.
 const VENDEDORES = [
-  { nombre: 'ALIRIO SANDOVAL',    user: 'VENTAS01', pass: '88237650',   terid: 767,   uid: 27  },
-  { nombre: 'OMAR BETANCOURT',    user: 'VENTAS02', pass: '1090398674', terid: 63376, uid: 14  },
-  { nombre: 'WILMER MENDOZA',     user: 'VENTAS03', pass: '1092154521', terid: 1938,  uid: 28  },
-  { nombre: 'ROGER CASTRO',       user: 'VENTAS04', pass: '1149463721', terid: 76854, uid: 205 },
-  { nombre: 'ARNOLD GARAVITO',    user: 'VENTAS06', pass: '1149464165', terid: 65895, uid: 16  },
-  { nombre: 'EDWIN NAVARRO',      user: 'VENTAS08', pass: '5408602',    terid: 59718, uid: 9   },
-  { nombre: 'ANDRES SUAREZ',      user: 'VENTAS09', pass: '1193594537', terid: 93798, uid: 232 },
-  { nombre: 'JORGE CARRILLO',     user: 'VENTAS11', pass: '88271732',   terid: 93732, uid: 243 },
-  { nombre: 'ANYELO BALLESTEROS', user: 'VENTAS12', pass: '13276347',   terid: 72561, uid: 121 },
-  { nombre: 'YEIMI DURAN',        user: 'VENTAS13', pass: 'vENTA1367',  terid: 98767, uid: 294 },
+  { nombre: 'ALIRIO SANDOVAL',    terid: 767,   uid: 27  },
+  { nombre: 'OMAR BETANCOURT',    terid: 63376, uid: 14  },
+  { nombre: 'WILMER MENDOZA',     terid: 1938,  uid: 28  },
+  { nombre: 'ROGER CASTRO',       terid: 76854, uid: 205 },
+  { nombre: 'ARNOLD GARAVITO',    terid: 65895, uid: 16  },
+  { nombre: 'EDWIN NAVARRO',      terid: 59718, uid: 9   },
+  { nombre: 'ANDRES SUAREZ',      terid: 93798, uid: 232 },
+  { nombre: 'JORGE CARRILLO',     terid: 93732, uid: 243 },
+  { nombre: 'ANYELO BALLESTEROS', terid: 72561, uid: 121 },
+  { nombre: 'YEIMI DURAN',        terid: 98767, uid: 294 },
 ]
 
 function spPost(body) {

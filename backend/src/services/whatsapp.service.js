@@ -510,21 +510,6 @@ async function createSession(tenantId, io, opts = {}) {
     handleOutgoingMessage(tenantId, msg, io).catch(() => {})
   })
 
-  client.on('message_ack', (msg, ack) => {
-    // ack === 3 → leído por el destinatario
-    if (ack >= 3 && msg.id?.id) {
-      const CampanaDestinatario = require('../models/CampanaDestinatario')
-      const Campana             = require('../models/Campana')
-      CampanaDestinatario.findOneAndUpdate(
-        { whatsappMsgId: msg.id.id, leyo: false },
-        { leyo: true, leyoAt: new Date() },
-        { new: true }
-      ).then(dest => {
-        if (dest) Campana.findByIdAndUpdate(dest.campanaId, { $inc: { leyeron: 1 } }).catch(() => {})
-      }).catch(() => {})
-    }
-  })
-
   try {
     await client.initialize()
   } catch (err) {
@@ -1060,21 +1045,6 @@ async function handleIncomingMessage(tenantId, msg, io) {
     conversation: conversation._id,
     message: inboundMsg,
   })
-
-  // Marcar respondio en campaña si este contacto recibió una campaña recientemente
-  try {
-    const CampanaDestinatario = require('../models/CampanaDestinatario')
-    const Campana             = require('../models/Campana')
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const campDest = await CampanaDestinatario.findOneAndUpdate(
-      { phone: { $in: [phone, phoneToUse] }, estado: 'enviado', respondio: false, enviadoAt: { $gte: sevenDaysAgo } },
-      { respondio: true, respondioAt: new Date() },
-      { new: true, sort: { enviadoAt: -1 } }
-    )
-    if (campDest) {
-      await Campana.findByIdAndUpdate(campDest.campanaId, { $inc: { respondieron: 1 } })
-    }
-  } catch (_) {}
 
   // isNew = es un contacto nuevo (no estaba en BD de clientes ni como lead previo)
   const isNew = !existingCustomer

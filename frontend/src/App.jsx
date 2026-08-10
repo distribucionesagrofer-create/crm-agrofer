@@ -27,7 +27,7 @@ import DashboardPage from './pages/DashboardPage'
 import VendedoresPage from './pages/VendedoresPage'
 import VendedorDetailPage from './pages/VendedorDetailPage'
 import ClientesPage from './pages/ClientesPage'
-import CampanasPage from './pages/CampanasPage'
+import BroadcastPage from './pages/BroadcastPage'
 import LeadsPage from './pages/LeadsPage'
 import NotificacionesPage from './pages/NotificacionesPage'
 import FlujosPage from './pages/FlujosPage'
@@ -68,7 +68,7 @@ export default function App() {
           <Route path="vendedores" element={<VendedoresPage />} />
           <Route path="vendedores/:id" element={<VendedorDetailPage />} />
           <Route path="clientes" element={<ClientesPage />} />
-          <Route path="campanas" element={<CampanasPage />} />
+          <Route path="broadcast" element={<BroadcastPage />} />
           <Route path="inbox-principal" element={<ErrorBoundary><InboxPrincipalPage /></ErrorBoundary>} />
           <Route path="flujos" element={<FlujosPage />} />
           <Route path="flujos/:id" element={<FlujoEditorPage />} />

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Smartphone, Users, Megaphone, Bot, BookOpen, LogOut, Zap, Map, BarChart2, UserCheck, Inbox, GitBranch, Bell, ShieldCheck, ShirtIcon, Radio, Package, FileText } from 'lucide-react'
+import { LayoutDashboard, Smartphone, Users, Bot, BookOpen, LogOut, Zap, Map, BarChart2, UserCheck, Inbox, GitBranch, Bell, ShieldCheck, ShirtIcon, Radio, Package, FileText, Send } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import clsx from 'clsx'
 import { ScreencastProvider } from '../../contexts/ScreencastContext'
@@ -14,7 +14,7 @@ const NAV = [
   navItem('/clientes',      Users,           'Clientes'),
   navItem('/leads',         UserCheck,       'Leads'),
   navItem('/merchandising',  ShirtIcon,    'Merchandising'),
-  navItem('/campanas',      Megaphone,       'Campañas'),
+  navItem('/broadcast',     Send,            'Broadcast'),
   navItem('/publicidad',    Radio,           'Publicidad'),
   navItem('/analisis',      BarChart2,       'Análisis Comercial'),
   navItem('/productos',     Package,         'Catálogo Productos'),

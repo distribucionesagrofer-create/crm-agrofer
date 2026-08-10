@@ -14,8 +14,7 @@ const COLORES = ['#EF4444','#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#0
 
 const fmt = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
 const fmtM = (n) => {
-  if (n >= 1_000_000_000) return `$${(n/1_000_000_000).toFixed(1)}B`
-  if (n >= 1_000_000)     return `$${(n/1_000_000).toFixed(1)}M`
+  if (n >= 1_000_000) return `$${(n/1_000_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })}M`
   return `$${(n/1000).toFixed(0)}K`
 }
 
@@ -465,6 +464,7 @@ export default function AnalisisComercialPage() {
                   <Line data={evolData} options={{
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtM(ctx.raw) } } },
                     scales: {
                       x: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 } } },

@@ -7,7 +7,8 @@ const { authenticate } = require('../middleware/auth')
 router.use(authenticate)
 
 // ── SINCRONIZACIÓN CON SISTEMA PRINCIPAL ─────────────────────────────────────
-const SP_API_KEY = process.env.SP_API_KEY || '03790f0b03256b17c29367cd32a2dfb4e2ea045678118aed'
+const SP_API_KEY = process.env.SP_API_KEY
+if (!SP_API_KEY) throw new Error('SP_API_KEY no configurada en el entorno')
 
 function spPost(body) {
   return new Promise((resolve, reject) => {
