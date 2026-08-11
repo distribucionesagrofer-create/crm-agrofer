@@ -39,7 +39,7 @@ const broadcastSchema = new mongoose.Schema({
 
   estado: {
     type: String,
-    enum: ['borrador', 'programada', 'enviando', 'completada', 'error'],
+    enum: ['borrador', 'pendiente', 'programada', 'enviando', 'completada', 'error'],
     default: 'borrador',
   },
 
