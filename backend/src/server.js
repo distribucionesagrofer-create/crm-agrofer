@@ -20,6 +20,10 @@ const { connect: connectDB } = require('./config/database')
 const { helmetConfig, corsConfig, rateLimiterMiddleware } = require('./config/security')
 
 const app = express()
+// Corre siempre detrás de un proxy (nginx, y en el VPS tambien Traefik) — sin esto,
+// Express ve todo el trafico como si viniera de una sola IP (la del proxy), y el rate
+// limiter (mas abajo) bloquea a todos los usuarios reales de una sola vez con 429.
+app.set('trust proxy', true)
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true },
