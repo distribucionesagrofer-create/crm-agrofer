@@ -28,6 +28,7 @@ import VendedoresPage from './pages/VendedoresPage'
 import VendedorDetailPage from './pages/VendedorDetailPage'
 import ClientesPage from './pages/ClientesPage'
 import BroadcastPage from './pages/BroadcastPage'
+import BroadcastDetailPage from './pages/BroadcastDetailPage'
 import LeadsPage from './pages/LeadsPage'
 import NotificacionesPage from './pages/NotificacionesPage'
 import FlujosPage from './pages/FlujosPage'
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="vendedores/:id" element={<VendedorDetailPage />} />
           <Route path="clientes" element={<ClientesPage />} />
           <Route path="broadcast" element={<BroadcastPage />} />
+          <Route path="broadcast/:id" element={<BroadcastDetailPage />} />
           <Route path="inbox-principal" element={<ErrorBoundary><InboxPrincipalPage /></ErrorBoundary>} />
           <Route path="flujos" element={<FlujosPage />} />
           <Route path="flujos/:id" element={<FlujoEditorPage />} />

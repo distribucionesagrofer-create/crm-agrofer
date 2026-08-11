@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, FileText, Users, Sparkles, CheckCircle, History, X,
@@ -36,7 +37,21 @@ function StepHeader({ step }) {
   )
 }
 
+function MiniBar({ label, value, total, color }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0
+  return (
+    <div className="flex items-center gap-1.5 min-w-[110px]">
+      <span className="text-[10px] text-gray-400 w-14 shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-[10px] text-gray-500 w-8 text-right shrink-0">{pct}%</span>
+    </div>
+  )
+}
+
 function HistorialModal({ onClose }) {
+  const navigate = useNavigate()
   const { data, isLoading } = useQuery({
     queryKey: ['broadcasts-historial'],
     queryFn: () => api.get('/broadcasts'),
@@ -60,22 +75,24 @@ function HistorialModal({ onClose }) {
             const st = ESTADO_CONFIG[b.estado] || ESTADO_CONFIG.pendiente
             const pct = b.destinatarios > 0 ? Math.round((b.enviados / b.destinatarios) * 100) : 0
             return (
-              <div key={b._id} className="px-6 py-4 border-b border-gray-50">
+              <button key={b._id} onClick={() => { onClose(); navigate(`/broadcast/${b._id}`) }}
+                className="w-full text-left px-6 py-4 border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <p className="font-medium text-sm">{b.nombre}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span>
                 </div>
-                <p className="text-xs text-gray-500">Plantilla: {b.plantillaNombre}</p>
-                <div className="flex items-center gap-3 mt-1.5 text-xs">
-                  <span className="text-blue-600">{b.enviados}/{b.destinatarios} enviados</span>
-                  {b.fallidos > 0 && <span className="text-red-500">{b.fallidos} fallidos</span>}
+                <p className="text-xs text-gray-500 mb-2">Plantilla: {b.plantillaNombre} · {b.destinatarios} destinatarios</p>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <MiniBar label="Entrega" value={b.entregados || 0} total={b.destinatarios} color="bg-indigo-400" />
+                  <MiniBar label="Leído"   value={b.leidos || 0}     total={b.destinatarios} color="bg-green-400" />
+                  {b.fallidos > 0 && <span className="text-[10px] text-red-500">{b.fallidos} fallidos</span>}
                 </div>
                 {b.estado === 'enviando' && (
                   <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 )}
-              </div>
+              </button>
             )
           })}
         </div>
@@ -226,7 +243,8 @@ export default function BroadcastPage() {
                     <span className="font-medium text-sm">{p.nombre}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{p.categoria}</span>
                   </div>
-                  <p className="text-xs text-gray-500 line-clamp-2">{p.cuerpo}</p>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-1.5">{p.cuerpo}</p>
+                  <span className="text-[10px] text-gray-400 uppercase">{p.idioma || 'es'}</span>
                 </button>
               ))}
             </div>

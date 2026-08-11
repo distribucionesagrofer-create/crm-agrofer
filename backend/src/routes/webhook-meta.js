@@ -11,6 +11,8 @@ const router  = express.Router()
 const Tenant     = require('../models/Tenant')
 const Message    = require('../models/Message')
 const Plantilla  = require('../models/PlantillaWhatsApp')
+const Broadcast             = require('../models/Broadcast')
+const BroadcastDestinatario = require('../models/BroadcastDestinatario')
 const { parseIncomingWebhook } = require('../services/meta-api.service')
 
 // Meta manda estos nombres de estado en el evento; PAUSED/UNPAUSED no cambian
@@ -56,6 +58,30 @@ router.get('/', async (req, res) => {
 
 // Mapea el status que manda Meta al enum que usa el modelo Message
 const STATUS_MAP = { sent: 'sent', delivered: 'delivered', read: 'read', failed: 'failed' }
+
+// Un mensaje de WhatsApp puede recibir varios eventos en secuencia (sent→delivered→read) —
+// cada uno solo avanza el estado del destinatario del Broadcast, nunca lo retrocede, y solo
+// suma al contador del Broadcast cuando de verdad avanzó (Meta puede reenviar el mismo evento).
+async function actualizarBroadcastDestinatario(whatsappMsgId, metaStatus) {
+  let campoEstado, campoFecha, campoContador, estadosPrevios
+  if (metaStatus === 'delivered') {
+    campoEstado = 'entregado'; campoFecha = 'entregadoAt'; campoContador = 'entregados'
+    estadosPrevios = ['enviado']
+  } else if (metaStatus === 'read') {
+    campoEstado = 'leido'; campoFecha = 'leidoAt'; campoContador = 'leidos'
+    estadosPrevios = ['enviado', 'entregado']
+  } else {
+    return
+  }
+  const dest = await BroadcastDestinatario.findOneAndUpdate(
+    { whatsappMsgId, estado: { $in: estadosPrevios } },
+    { $set: { estado: campoEstado, [campoFecha]: new Date() } },
+    { new: true }
+  )
+  if (dest) {
+    await Broadcast.findByIdAndUpdate(dest.broadcastId, { $inc: { [campoContador]: 1 } })
+  }
+}
 
 router.post('/', async (req, res) => {
   // Meta espera 200 inmediato — siempre responder rapido
@@ -126,6 +152,7 @@ router.post('/', async (req, res) => {
         const mapped = STATUS_MAP[st.status]
         if (!mapped) continue
         await Message.findOneAndUpdate({ whatsappMsgId: st.id }, { status: mapped }).catch(() => {})
+        await actualizarBroadcastDestinatario(st.id, st.status).catch(() => {})
       }
       return
     }

@@ -1894,6 +1894,19 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
 
     io?.to(`vendedor:${tenantId}`).emit('message:new', { conversation: conversation._id, message: inbMsg })
 
+    // Marcar respondio en Broadcast si este contacto recibio uno recientemente
+    try {
+      const BroadcastDestinatario = require('../models/BroadcastDestinatario')
+      const Broadcast             = require('../models/Broadcast')
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const bDest = await BroadcastDestinatario.findOneAndUpdate(
+        { phone, estado: { $in: ['enviado', 'entregado', 'leido'] }, respondio: false, enviadoAt: { $gte: sevenDaysAgo } },
+        { respondio: true, respondioAt: new Date() },
+        { new: true, sort: { enviadoAt: -1 } }
+      )
+      if (bDest) await Broadcast.findByIdAndUpdate(bDest.broadcastId, { $inc: { respondieron: 1 } })
+    } catch (_) {}
+
     // Ejecutar orquestador si IA esta activa
     const aiBlocked = !tenant.ai?.enabled || !tenant.ai?.autoReply || !conversation.aiEnabled
     if (aiBlocked || !text) return

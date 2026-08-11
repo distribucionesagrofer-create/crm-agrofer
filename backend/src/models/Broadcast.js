@@ -32,6 +32,9 @@ const broadcastSchema = new mongoose.Schema({
 
   destinatarios: { type: Number, default: 0 },
   enviados:      { type: Number, default: 0 },
+  entregados:    { type: Number, default: 0 },
+  leidos:        { type: Number, default: 0 },
+  respondieron:  { type: Number, default: 0 },
   fallidos:      { type: Number, default: 0 },
 
   estado: {

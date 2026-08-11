@@ -59,6 +59,14 @@ router.get('/', async (req, res) => {
   res.json({ broadcasts })
 })
 
+// GET /api/broadcasts/:id — detalle con contadores para el panel de analytics
+router.get('/:id', async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'ID inválido' })
+  const broadcast = await Broadcast.findById(req.params.id).lean()
+  if (!broadcast) return res.status(404).json({ error: 'Broadcast no encontrado' })
+  res.json({ broadcast })
+})
+
 // GET /api/broadcasts/:id/destinatarios
 router.get('/:id/destinatarios', async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'ID inválido' })
