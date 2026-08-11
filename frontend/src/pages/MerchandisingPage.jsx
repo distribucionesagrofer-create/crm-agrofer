@@ -4,7 +4,7 @@ import {
   Package, Plus, Search, Trash2, Minus, X, Upload,
   Filter, Tag, ShirtIcon, Gift, Building2,
   ArrowDown, ArrowUp, History, RotateCcw, Send, FileDown, Pencil, CheckCircle2,
-  LayoutGrid, List, Users, Images, ChevronLeft, ChevronRight, Camera, ChevronDown, FileText,
+  LayoutGrid, List, Users, ChevronLeft, ChevronRight, Camera, ChevronDown, FileText,
 } from 'lucide-react'
 import XLSXStyle from 'xlsx-js-style'
 import api from '../services/api'

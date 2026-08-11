@@ -430,6 +430,28 @@ function MessageBubble({ msg, isOut, isGroup, showSender }) {
         {msg.type === 'audio' && msg.mediaUrl && (
           <AudioPlayer src={msg.mediaUrl} isOut={isOut} />
         )}
+        {/* Plantilla enviada (broadcast/difusión) — header, cuerpo con variables ya resueltas, botones */}
+        {msg.type === 'template' && (
+          <div className="px-3 pt-2 pb-1">
+            {msg.templateHeader && (
+              <p className="font-bold text-[13px] mb-1">{msg.templateHeader}</p>
+            )}
+            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+            {msg.templateFooter && (
+              <p className={`text-xs mt-1 ${isOut ? 'text-white/60' : 'text-gray-400'}`}>{msg.templateFooter}</p>
+            )}
+            {msg.templateButtons?.length > 0 && (
+              <div className={`mt-2 -mx-3 border-t ${isOut ? 'border-white/15' : 'border-gray-100'}`}>
+                {msg.templateButtons.map((b, i) => (
+                  <div key={i}
+                    className={`text-center text-[13px] font-medium py-2 px-3 ${isOut ? 'text-blue-200' : 'text-blue-600'} ${i > 0 ? `border-t ${isOut ? 'border-white/15' : 'border-gray-100'}` : ''}`}>
+                    {b.texto}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {/* Documento */}
         {msg.type === 'document' && msg.mediaUrl && (
           <a
@@ -449,8 +471,8 @@ function MessageBubble({ msg, isOut, isGroup, showSender }) {
             </div>
           </a>
         )}
-        {/* Texto / caption — nunca mostrar base64 crudo */}
-        {msg.content && !/^(\/9j\/|iVBOR|R0lGOD|UklGR|PHN2Zy)/.test(msg.content) && (
+        {/* Texto / caption — nunca mostrar base64 crudo (template ya renderiza su propio cuerpo arriba) */}
+        {msg.type !== 'template' && msg.content && !/^(\/9j\/|iVBOR|R0lGOD|UklGR|PHN2Zy)/.test(msg.content) && (
           <p className={`px-3 whitespace-pre-wrap break-words leading-relaxed ${msg.type !== 'text' ? 'pt-1 pb-1 text-xs' : 'pt-2 pb-1'}`}>{msg.content}</p>
         )}
         {/* Footer: hora + tick */}
@@ -689,7 +711,7 @@ export default function WhatsAppChat({ conversation, vendedorId, onClose, onConv
         setNeedsAttention(false)
       }
     },
-    onError: () => setSending(false),
+    onError: (e) => { setSending(false); alert(e?.error || 'Error al enviar el mensaje') },
   })
 
   const sendMedia = useMutation({
@@ -697,7 +719,7 @@ export default function WhatsAppChat({ conversation, vendedorId, onClose, onConv
       base64: media.base64, mimetype: media.mimetype, filename: media.filename, caption: text || '',
     })},
     onSuccess: () => { setMedia(null); setText(''); setSending(false); qc.invalidateQueries(['chat-msgs', conversation._id]) },
-    onError:   () => setSending(false),
+    onError:   (e) => { setSending(false); alert(e?.error || 'Error al enviar el adjunto') },
   })
 
   const toggleConv = useMutation({

@@ -1,17 +1,27 @@
 const mongoose = require('mongoose')
 const { MESSAGE_DIRECTION } = require('../config/constants')
 
+const templateBotonSchema = new mongoose.Schema({
+  tipo:  { type: String },
+  texto: { type: String },
+  valor: { type: String },
+}, { _id: false })
+
 const messageSchema = new mongoose.Schema({
   tenantId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },
   direction:    { type: String, enum: Object.values(MESSAGE_DIRECTION), required: true },
   content:      { type: String, default: '' },
-  type:         { type: String, enum: ['text', 'image', 'video', 'audio', 'document', 'sticker'], default: 'text' },
+  type:         { type: String, enum: ['text', 'image', 'video', 'audio', 'document', 'sticker', 'template'], default: 'text' },
   mediaUrl:     { type: String },
   mediaType:    { type: String },   // MIME type: "image/jpeg", "video/mp4", "audio/ogg"
   fileName:     { type: String },   // Nombre original del archivo
   fileSize:     { type: Number },   // Tamaño en bytes
   duration:     { type: Number },   // Duración en segundos (audio/video)
+  // Snapshot de la plantilla de Meta al momento de enviarla (para type: 'template')
+  templateHeader:  { type: String },
+  templateFooter:  { type: String },
+  templateButtons: [templateBotonSchema],
   // Reply/quote
   replyTo: {
     messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },

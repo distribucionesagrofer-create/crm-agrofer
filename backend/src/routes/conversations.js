@@ -105,15 +105,22 @@ router.post('/:id/messages', async (req, res) => {
   res.status(201).json({ message })
 })
 
-const MAX_MEDIA_MB = 50
+// Límites reales de Meta Cloud API por tipo de adjunto (ver docs de WhatsApp Cloud API)
+const MAX_MEDIA_MB = { image: 5, video: 16, audio: 16, document: 100 }
 router.post('/:id/media', async (req, res) => {
   const { base64, mimetype, filename, caption } = req.body
   if (!base64 || !mimetype) return res.status(400).json({ error: 'base64 y mimetype requeridos' })
 
+  const tipoLimite = mimetype.startsWith('image/') ? 'image'
+    : mimetype.startsWith('video/') ? 'video'
+    : mimetype.startsWith('audio/') ? 'audio'
+    : 'document'
+  const maxMb = MAX_MEDIA_MB[tipoLimite]
+
   // Verificar tamaño antes de procesar (base64 es ~33% más grande que el archivo real)
   const estimatedBytes = Math.ceil((base64.length * 3) / 4)
-  if (estimatedBytes > MAX_MEDIA_MB * 1024 * 1024) {
-    return res.status(413).json({ error: `El archivo supera el límite de ${MAX_MEDIA_MB}MB` })
+  if (estimatedBytes > maxMb * 1024 * 1024) {
+    return res.status(413).json({ error: `El archivo supera el límite de ${maxMb}MB para ${tipoLimite === 'document' ? 'documentos' : tipoLimite === 'image' ? 'imágenes' : tipoLimite === 'video' ? 'videos' : 'audios'}` })
   }
 
   const conversation = await Conversation.findById(req.params.id)

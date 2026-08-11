@@ -2,6 +2,10 @@ const Broadcast             = require('../models/Broadcast')
 const BroadcastDestinatario = require('../models/BroadcastDestinatario')
 const Customer               = require('../models/Customer')
 const Tenant                 = require('../models/Tenant')
+const Conversation            = require('../models/Conversation')
+const Message                 = require('../models/Message')
+const PlantillaWhatsApp       = require('../models/PlantillaWhatsApp')
+const { MESSAGE_DIRECTION }   = require('../config/constants')
 
 let io = null
 let schedulerStarted = false
@@ -40,6 +44,49 @@ function resolverComponents(personalizacion, customer) {
   return [{ type: 'body', parameters }]
 }
 
+// Sustituye {{n}} en el cuerpo de la plantilla con los valores resueltos, para guardar
+// el mensaje real (no solo el nombre de la plantilla) en el Message del inbox.
+function resolverTextoPlantilla(cuerpo, personalizacion, customer) {
+  let texto = cuerpo || ''
+  for (const p of (personalizacion || [])) {
+    const valor = p.tipo === 'campo' ? (customer?.[p.valor] || '') : p.valor
+    texto = texto.split(`{{${p.variable}}}`).join(String(valor || ''))
+  }
+  return texto
+}
+
+// Registra el envío en el inbox (Conversation + Message) para que el asesor vea, en el
+// hilo del contacto, exactamente la plantilla que se le mandó — con botones y todo.
+async function registrarEnInbox(tenantId, dest, customer, plantilla, textoResuelto, whatsappMsgId) {
+  try {
+    let conv = await Conversation.findOneAndUpdate(
+      { tenantId, phone: dest.phone, status: { $in: ['open', 'closed', 'pending'] } },
+      { $set: { lastMessageAt: new Date(), ...(customer ? { customer: customer._id } : {}) } },
+      { upsert: false, new: true, sort: { createdAt: -1 } }
+    )
+    if (!conv) {
+      conv = await Conversation.create({
+        tenantId, phone: dest.phone,
+        customer: customer?._id || null,
+        contactName: dest.nombre || customer?.name || '',
+        aiEnabled: false, lastMessageAt: new Date(),
+      })
+    }
+    await Message.create({
+      tenantId, conversation: conv._id,
+      direction: MESSAGE_DIRECTION.OUTBOUND,
+      content: textoResuelto, type: 'template',
+      templateHeader: plantilla?.header?.tipo === 'texto' ? plantilla.header.contenido : '',
+      templateFooter: plantilla?.footer || '',
+      templateButtons: plantilla?.botones || [],
+      aiGenerated: false,
+      whatsappMsgId: whatsappMsgId || undefined,
+    })
+  } catch (e) {
+    console.error(`[Broadcast] Error registrando en inbox (${dest.phone}):`, e.message)
+  }
+}
+
 async function ejecutarBroadcast(broadcastId) {
   const broadcast = await Broadcast.findOneAndUpdate(
     { _id: broadcastId, estado: { $in: ['programada', 'pendiente'] } },
@@ -60,7 +107,8 @@ async function ejecutarBroadcast(broadcastId) {
     return
   }
 
-  const provider = require('./message-provider.service')
+  const provider  = require('./message-provider.service')
+  const plantilla = await PlantillaWhatsApp.findById(broadcast.plantillaId).lean()
 
   let enviados = 0
   let fallidos = 0
@@ -83,6 +131,8 @@ async function ejecutarBroadcast(broadcastId) {
           await BroadcastDestinatario.findByIdAndUpdate(dest._id, {
             estado: 'enviado', enviadoAt: new Date(), whatsappMsgId: result.messageId || '',
           })
+          const textoResuelto = resolverTextoPlantilla(plantilla?.cuerpo, broadcast.personalizacion, customer)
+          await registrarEnInbox(broadcast.tenantId, dest, customer, plantilla, textoResuelto, result.messageId)
         } else {
           fallidos++
           await BroadcastDestinatario.findByIdAndUpdate(dest._id, {

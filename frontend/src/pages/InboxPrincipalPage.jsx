@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation } from 'react-router-dom'
-import { ChevronDown, Wifi, WifiOff, Users } from 'lucide-react'
+import { Wifi, WifiOff, Users } from 'lucide-react'
 import api from '../services/api'
 import { socket, joinVendedor } from '../services/socket'
 import ConversationList from '../components/ConversationList'
@@ -42,37 +42,21 @@ export default function InboxPrincipalPage() {
   const initC      = urlParams.get('c')
   const openedRef  = useRef(false)   // para no re-abrir la conv en cada re-render
 
-  const [vendedorId, setVendedorId]     = useState(initV || null)
   const [pendingConvId]                 = useState(initC || null)
   const [selectedConv, setSelectedConv] = useState(null)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [tab, setTab]                   = useState('inbox')
   const qc = useQueryClient()
 
-  // Cargar vendedores
+  // El Inbox es solo para la línea principal (Meta API) — las demás líneas (whatsapp-web.js)
+  // no manejan chat en vivo desde el CRM, el vendedor responde desde su propio celular.
   const { data: vData } = useQuery({
     queryKey: ['vendedores-inbox'],
     queryFn:  () => api.get('/vendedores'),
   })
-  const vendedores = [...(vData?.vendedores || [])].sort((a, b) => {
-    if (a.slug === 'linea-principal') return -1
-    if (b.slug === 'linea-principal') return  1
-    const aConn = a.whatsapp?.status === 'connected' ? 0 : 1
-    const bConn = b.whatsapp?.status === 'connected' ? 0 : 1
-    return aConn - bConn
-  })
-
-  // Seleccionar línea al cargar (param URL o línea principal por defecto)
-  useEffect(() => {
-    if (vendedores.length > 0 && !vendedorId) {
-      const linea = vendedores.find(v => v.slug === 'linea-principal')
-      if (linea) setVendedorId(linea._id)
-    }
-  }, [vendedores])
-
-  const vendedorActual   = vendedores.find(v => v._id === vendedorId)
-  const connected        = vendedorActual?.whatsapp?.status === 'connected'
-  const esLineaPrincipal = vendedorActual?.slug === 'linea-principal'
+  const vendedorActual = (vData?.vendedores || []).find(v => v.slug === 'linea-principal')
+  const vendedorId     = vendedorActual?._id || initV || null
+  const connected       = vendedorActual?.whatsapp?.status === 'connected'
+  const esLineaPrincipal = true
 
   // Socket — notificaciones y refresco
   useEffect(() => {
@@ -124,13 +108,6 @@ export default function InboxPrincipalPage() {
     }
   }, [convs, pendingConvId])
 
-  const cambiarVendedor = (id) => {
-    setVendedorId(id)
-    setSelectedConv(null)
-    setDropdownOpen(false)
-    setTab('inbox')
-  }
-
   return (
     <div className="flex flex-1 min-h-0 min-w-0 bg-[#111b21]">
 
@@ -147,35 +124,10 @@ export default function InboxPrincipalPage() {
             </div>
           </div>
 
-          {/* Selector de línea */}
-          <div className="relative">
-            <button onClick={() => setDropdownOpen(v => !v)}
-              className="w-full flex items-center gap-2 bg-[#2a3942] hover:bg-[#374248] px-3 py-2 rounded-lg transition-colors text-left">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-500'}`} />
-              <span className="flex-1 text-sm text-gray-200 truncate">{vendedorActual?.nombre || 'Seleccionar…'}</span>
-              {vendedorActual?.zona && <span className="text-xs text-gray-500 shrink-0">{vendedorActual.zona}</span>}
-              <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-[#233138] border border-gray-700 rounded-xl shadow-2xl z-30 max-h-72 overflow-y-auto">
-                {vendedores.map(v => {
-                  const conn    = v.whatsapp?.status === 'connected'
-                  const isLinea = v.slug === 'linea-principal'
-                  return (
-                    <button key={v._id} onClick={() => cambiarVendedor(v._id)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#2a3942] transition-colors ${v._id === vendedorId ? 'bg-[#2a3942]' : ''} ${isLinea ? 'border-b border-gray-700' : ''}`}>
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${conn ? 'bg-green-500' : 'bg-gray-600'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${isLinea ? 'text-brand' : 'text-gray-200'}`}>{v.nombre}</p>
-                        {v.zona && <p className="text-xs text-gray-500">{v.zona}</p>}
-                      </div>
-                      {v._id === vendedorId && <div className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+          {/* Línea principal — única línea que maneja chat en vivo */}
+          <div className="w-full flex items-center gap-2 bg-[#2a3942] px-3 py-2 rounded-lg">
+            <div className={`w-2 h-2 rounded-full shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-500'}`} />
+            <span className="flex-1 text-sm text-gray-200 truncate">{vendedorActual?.nombre || 'Línea Principal AGROFER'}</span>
           </div>
 
           {/* Tabs solo para línea principal */}
@@ -257,7 +209,7 @@ export default function InboxPrincipalPage() {
           <div className="text-center">
             <p className="text-gray-300 font-medium">Selecciona una conversación</p>
             <p className="text-gray-500 text-sm mt-1">
-              {vendedorActual ? `Viendo: ${vendedorActual.nombre}` : 'Elige una línea WhatsApp arriba'}
+              {vendedorActual ? `Viendo: ${vendedorActual.nombre}` : 'Cargando línea principal…'}
             </p>
           </div>
         </div>

@@ -32,11 +32,17 @@ const io = new Server(server, {
 
 app.use(helmetConfig)
 app.use(corsConfig)
-// verify: captura el body crudo para poder validar la firma HMAC del webhook de Meta
-// (X-Hub-Signature-256), que se calcula sobre los bytes exactos recibidos, no sobre el JSON re-serializado
-// 25mb: los archivos viajan en base64 (~37% más pesado que el binario real), así que esto
-// cubre videos de hasta ~16-18MB — el límite práctico de un video de Estado de WhatsApp
-app.use(express.json({ limit: '25mb', verify: (req, res, buf) => { req.rawBody = buf } }))
+// Adjuntos del inbox (POST /api/conversations/:id/media) van en base64 dentro del JSON,
+// y Meta permite documentos de hasta 100MB — eso son ~134MB ya codificados en base64, muy
+// por encima del límite general de 25mb. Esta ruta necesita su propio parser con límite
+// más alto; el resto de la API se queda con el límite chico (incluye rawBody para la firma
+// del webhook de Meta, que esta ruta no usa).
+const mediaJsonParser   = express.json({ limit: '140mb' })
+const defaultJsonParser = express.json({ limit: '25mb', verify: (req, res, buf) => { req.rawBody = buf } })
+app.use((req, res, next) => {
+  if (/^\/api\/conversations\/[^/]+\/media$/.test(req.path)) return mediaJsonParser(req, res, next)
+  return defaultJsonParser(req, res, next)
+})
 app.use(morgan('dev'))
 app.set('io', io)
 
