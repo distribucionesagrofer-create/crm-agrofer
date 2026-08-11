@@ -13,10 +13,23 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    env_file: ./backend/.env
     shm_size: '1gb'
     environment:
       TZ: America/Bogota
+      PORT: 3000
+      NODE_ENV: production
+      MONGO_URI: mongodb://admin:${MONGO_PASSWORD}@mongodb:27017/drakocrm?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FRONTEND_URL: ${PUBLIC_URL}
+      PUBLIC_URL: ${PUBLIC_URL}
+      SP_API_KEY: ${SP_API_KEY}
+      RATE_LIMIT_MAX: 100
+      RATE_LIMIT_WINDOW: 60
     volumes:
       - ${SESSIONS_DIR:-./sessions}:/app/sessions
       - ${UPLOADS_DIR:-./uploads}:/app/uploads
