@@ -1899,8 +1899,17 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
       const BroadcastDestinatario = require('../models/BroadcastDestinatario')
       const Broadcast             = require('../models/Broadcast')
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      const bDest = await BroadcastDestinatario.findOneAndUpdate(
-        { phone, estado: { $in: ['enviado', 'entregado', 'leido'] }, respondio: false, enviadoAt: { $gte: sevenDaysAgo } },
+      // Comparar por los últimos 10 dígitos: el teléfono de Meta siempre viene con
+      // indicativo de país (ej. 573133273616), pero algunos Customer/Destinatario
+      // quedaron guardados sin el indicativo (ej. 3133273616) por carga manual.
+      const core10 = String(phone || '').replace(/\D/g, '').slice(-10)
+      const bDest = core10.length < 10 ? null : await BroadcastDestinatario.findOneAndUpdate(
+        {
+          phone: new RegExp(core10 + '$'),
+          estado: { $in: ['enviado', 'entregado', 'leido'] },
+          respondio: false,
+          enviadoAt: { $gte: sevenDaysAgo },
+        },
         { respondio: true, respondioAt: new Date() },
         { new: true, sort: { enviadoAt: -1 } }
       )
