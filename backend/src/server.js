@@ -38,10 +38,11 @@ app.use(corsConfig)
 // cubre videos de hasta ~16-18MB — el límite práctico de un video de Estado de WhatsApp
 app.use(express.json({ limit: '25mb', verify: (req, res, buf) => { req.rawBody = buf } }))
 app.use(morgan('dev'))
-app.use(rateLimiterMiddleware)
 app.set('io', io)
 
-// Servir archivos de media (imágenes, videos, audios subidos por WhatsApp)
+// Servir archivos de media (imágenes, videos, audios subidos por WhatsApp) — antes del
+// rate limiter a propósito: una sola galería (ej. merchandising) puede pedir decenas de
+// archivos de golpe, y no es abuso de API, es solo servir estáticos.
 const path = require('path')
 const fs   = require('fs')
 const uploadsDir = path.join(__dirname, '../uploads')
@@ -65,6 +66,8 @@ app.use('/media', (req, res, next) => {
     res.setHeader('Cache-Control', 'public, max-age=604800')
   },
 }))
+
+app.use(rateLimiterMiddleware)
 
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date() }))
 app.use('/api/auth',          require('./routes/auth'))
