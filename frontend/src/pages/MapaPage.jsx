@@ -113,13 +113,19 @@ export default function MapaPage() {
     return base.filter(c => c.name?.toLowerCase().includes(q) || c.empresa?.toLowerCase().includes(q) || c.barrio?.toLowerCase().includes(q))
   }, [conCoords, vendedorActivo, busqueda])
 
-  // Clientes del vendedor activo para la lista sidebar
+  // Clientes del vendedor activo para la lista sidebar — busca por nombre, empresa,
+  // barrio o teléfono (antes solo comparaba nombre/empresa, así que buscar por
+  // cualquier otro dato no encontraba al cliente aunque sí estuviera en la lista).
   const clientesVendedor = useMemo(() => {
     if (!vendedorActivo) return []
-    const q = busqueda.toLowerCase()
+    const q = busqueda.toLowerCase().trim()
     return clientes
       .filter(c => (c.vendedorId?._id || c.vendedorId) === vendedorActivo)
-      .filter(c => !q || c.name?.toLowerCase().includes(q) || c.empresa?.toLowerCase().includes(q))
+      .filter(c => !q
+        || c.name?.toLowerCase().includes(q)
+        || c.empresa?.toLowerCase().includes(q)
+        || c.barrio?.toLowerCase().includes(q)
+        || c.phone?.includes(q))
   }, [clientes, vendedorActivo, busqueda])
 
   const seleccionar = (id) => {
