@@ -1812,17 +1812,23 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
   let conversation = null
 
   try {
-    // Buscar cliente o lead por telefono
+    // Buscar cliente o lead por telefono. La línea principal es un número compartido,
+    // no el de un vendedor puntual — el cliente que escribe está asignado a SU vendedor
+    // real, no a esta línea, así que no se filtra por vendedorId acá (antes ese filtro
+    // hacía que NUNCA se encontrara al cliente, sin importar el teléfono). Tampoco se
+    // puede exigir match exacto de teléfono: algunos clientes quedaron guardados sin el
+    // indicativo de país (57), mientras Meta siempre lo manda completo.
     let contactId   = null
     let contactType = 'desconocido'
 
-    const customer = await Customer.findOne({ phone, vendedorId: tenantId })
+    const phoneVariants = [phone, phone.replace(/^57/, ''), `57${phone.replace(/^57/, '')}`]
+    const customer = await Customer.findOne({ phone: { $in: phoneVariants } })
     if (customer) {
       contactId   = customer._id
       contactType = 'customer'
       await Customer.findByIdAndUpdate(customer._id, { lastContactAt: new Date() })
     } else {
-      const lead = await Lead.findOne({ phone, tenantId })
+      const lead = await Lead.findOne({ phone: { $in: phoneVariants }, tenantId })
       if (lead) {
         contactId   = lead._id
         contactType = 'lead'

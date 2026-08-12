@@ -14,7 +14,11 @@ router.get('/', async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const [conversations, total] = await Promise.all([
     Conversation.find(query)
-      .populate('customer', 'name phone')
+      .populate({
+        path: 'customer',
+        select: 'name phone zona ciudad direccion empresa sector temperatura potencial cupoCredito plazo vendedorId',
+        populate: { path: 'vendedorId', select: 'nombre' },
+      })
       .populate('lead', 'name phone status')
       .sort({ lastMessageAt: -1 })
       .skip(skip)
@@ -213,7 +217,11 @@ router.patch('/:id', async (req, res) => {
   if (etiquetas            !== undefined) update.etiquetas            = etiquetas
 
   const conversation = await Conversation.findByIdAndUpdate(req.params.id, update, { new: true })
-    .populate('customer', 'name phone')
+    .populate({
+      path: 'customer',
+      select: 'name phone zona ciudad direccion empresa sector temperatura potencial cupoCredito plazo vendedorId',
+      populate: { path: 'vendedorId', select: 'nombre' },
+    })
   if (!conversation) return res.status(404).json({ error: 'Conversación no encontrada' })
 
   const io = req.app.get('io')

@@ -55,7 +55,9 @@ export default function InboxPrincipalPage() {
   })
   const vendedorActual = (vData?.vendedores || []).find(v => v.slug === 'linea-principal')
   const vendedorId     = vendedorActual?._id || initV || null
-  const connected       = vendedorActual?.whatsapp?.status === 'connected'
+  // La línea principal opera por Meta API, no por whatsapp-web.js — su estado real
+  // depende de tener la API activa, no de whatsapp.status (eso es de la sesión QR vieja).
+  const connected       = !!(vendedorActual?.metaApi?.enabled && vendedorActual?.metaApi?.accessToken)
   const esLineaPrincipal = true
 
   // Socket — notificaciones y refresco

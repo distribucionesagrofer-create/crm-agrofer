@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, Paperclip, X, RefreshCw, Check, CheckCheck,
   ChevronLeft, User, StickyNote, Bot,
-  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause,
+  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause, Users, MapPin, Building2, Wallet,
 } from 'lucide-react'
 import api from '../services/api'
 import { socket } from '../services/socket'
@@ -73,9 +73,14 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
       <div className="flex-1 overflow-y-auto">
         {/* Avatar y nombre */}
         <div className="flex flex-col items-center py-6 px-4 border-b border-gray-800">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3"
+          <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3 overflow-hidden"
             style={{ background: isLead ? '#92400e' : '#065f46' }}>
-            {contact?.name?.[0]?.toUpperCase() || '?'}
+            {conversation.profileImage
+              ? <img src={conversation.profileImage} alt="" className="w-full h-full object-cover"
+                  onError={e => { e.target.style.display = 'none' }} />
+              : contact?.name?.[0]
+                ? contact.name[0].toUpperCase()
+                : <User size={26} className="text-white/80" />}
           </div>
           <p className="text-white font-semibold text-base">{contact?.name || 'Sin nombre'}</p>
           <p className="text-gray-400 text-xs mt-1 flex items-center gap-1">
@@ -155,11 +160,47 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
           </div>
         )}
 
-        {/* Info adicional */}
-        {contact?.zona && (
-          <div className="px-4 py-3 border-b border-gray-800">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Zona</p>
-            <p className="text-xs text-gray-300">{contact.zona}</p>
+        {/* Datos del cliente — solo si está vinculado a un Customer real */}
+        {!isLead && contact && (contact.zona || contact.ciudad || contact.direccion || contact.empresa || contact.vendedorId || contact.temperatura || contact.potencial) && (
+          <div className="px-4 py-3 border-b border-gray-800 space-y-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Datos del cliente</p>
+            {(contact.ciudad || contact.zona) && (
+              <div className="flex items-start gap-2">
+                <MapPin size={12} className="text-gray-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-300">
+                  {[contact.ciudad, contact.zona].filter(Boolean).join(' · ')}
+                  {contact.direccion && <span className="text-gray-500"> — {contact.direccion}</span>}
+                </p>
+              </div>
+            )}
+            {contact.empresa && (
+              <div className="flex items-start gap-2">
+                <Building2 size={12} className="text-gray-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-300">{contact.empresa}</p>
+              </div>
+            )}
+            {contact.vendedorId?.nombre && (
+              <div className="flex items-start gap-2">
+                <UserCheck size={12} className="text-gray-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-300">Asesor: {contact.vendedorId.nombre}</p>
+              </div>
+            )}
+            {contact.cupoCredito > 0 && (
+              <div className="flex items-start gap-2">
+                <Wallet size={12} className="text-gray-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-300">Cupo crédito: ${contact.cupoCredito.toLocaleString('es-CO')}{contact.plazo ? ` · ${contact.plazo} días` : ''}</p>
+              </div>
+            )}
+            {(contact.temperatura || contact.potencial) && (
+              <div className="flex gap-1.5 flex-wrap pt-0.5">
+                {contact.temperatura && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 capitalize">{contact.temperatura}</span>
+                )}
+                {contact.potencial && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 capitalize">potencial {contact.potencial}</span>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -785,10 +826,17 @@ export default function WhatsAppChat({ conversation, vendedorId, onClose, onConv
         )}
         {/* Avatar */}
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0 overflow-hidden"
           style={{ background: isLead ? '#92400e' : conversation.isGroup ? '#3b82f6' : '#1f6b45' }}
         >
-          {contact?.name?.[0]?.toUpperCase() || '?'}
+          {conversation.profileImage
+            ? <img src={conversation.profileImage} alt="" className="w-full h-full object-cover"
+                onError={e => { e.target.style.display = 'none' }} />
+            : conversation.isGroup
+              ? <Users size={16} className="text-white/80" />
+              : contact?.name?.[0]
+                ? contact.name[0].toUpperCase()
+                : <User size={16} className="text-white/80" />}
         </div>
         {/* Info del contacto — SIEMPRE visible */}
         <div className="flex-1 min-w-0">

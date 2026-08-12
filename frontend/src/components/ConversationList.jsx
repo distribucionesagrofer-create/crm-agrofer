@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, X, Trash2, MessageSquare, Users, Bot, Eye, UserX } from 'lucide-react'
+import { Search, X, Trash2, MessageSquare, Users, Bot, Eye, UserX, User } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../services/api'
 
@@ -204,10 +204,12 @@ export default function ConversationList({
               >
                 {isGroup
                   ? <Users size={18} className="text-white" />
-                  : (c.profileImage
-                      ? <img src={c.profileImage} alt="" className="w-full h-full object-cover"
-                          onError={e => { e.target.style.display = 'none' }} />
-                      : (contact?.name?.[0]?.toUpperCase() || '?'))
+                  : c.profileImage
+                    ? <img src={c.profileImage} alt="" className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display = 'none' }} />
+                    : contact?.name?.[0]
+                      ? contact.name[0].toUpperCase()
+                      : <User size={18} className="text-white/80" />
                 }
               </div>
 
