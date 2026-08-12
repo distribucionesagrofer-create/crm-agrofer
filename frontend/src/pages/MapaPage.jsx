@@ -1,8 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { MapContainer, TileLayer, Marker, Popup, Polygon, LayersControl, CircleMarker, useMap } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import { Map, Users, Search, X, ChevronRight, MapPin, Phone, Building2, Layers, Flame, Navigation } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import L from 'leaflet'
 import api from '../services/api'
 
@@ -349,7 +352,9 @@ export default function MapaPage() {
               )
             })}
 
-            {/* Marcadores */}
+            {/* Marcadores — agrupados (cluster) para no dibujar cientos de pines sueltos
+                a la vez, que es lo que hacía lento el mapa con muchos clientes visibles. */}
+            <MarkerClusterGroup chunkedLoading maxClusterRadius={60} spiderfyOnMaxZoom disableClusteringAtZoom={16}>
             {conCoords.map(c => {
               const vidStr  = c.vendedorId?._id || c.vendedorId
               const color   = coloresMap[vidStr] || '#9ca3af'
@@ -407,6 +412,7 @@ export default function MapaPage() {
                 </Marker>
               )
             })}
+            </MarkerClusterGroup>
           </MapContainer>
         )}
 
