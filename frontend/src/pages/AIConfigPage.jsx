@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Save, CheckCircle, ChevronDown, ChevronUp, Key, Eye, EyeOff, Zap, AlertCircle, Mic, Play, Square, Plus, X, ShieldAlert, Globe, Lock } from 'lucide-react'
+import { Bot, Save, CheckCircle, Key, Eye, EyeOff, Zap, AlertCircle, Mic, Play, Square, Plus, X, ShieldAlert, Globe, Lock } from 'lucide-react'
 import api from '../services/api'
 
 const INTENTS_LIST = [
@@ -334,8 +334,7 @@ function ToggleRow({ label, desc, value, onChange, highlight }) {
   )
 }
 
-function VendedorAICard({ vendedor }) {
-  const [expanded, setExpanded] = useState(false)
+function LineaConfig({ vendedor }) {
   const audioRef = useRef(null)
   const [playingVoice, setPlayingVoice] = useState(null)
   const [loadingVoice, setLoadingVoice] = useState(null)
@@ -344,7 +343,6 @@ function VendedorAICard({ vendedor }) {
     enabled:             vendedor.ai?.enabled           ?? false,
     autoReply:           vendedor.ai?.autoReply         ?? false,
     systemPrompt:        vendedor.ai?.systemPrompt      ?? '',
-    botActivationKeyword:vendedor.botActivationKeyword  ?? 'activar bot',
     ttsEnabled:          vendedor.tts?.enabled          ?? false,
     ttsVoice:            vendedor.tts?.voice            ?? 'nova',
     asistNombre:    vendedor.assistant?.nombre             ?? 'Asesor Virtual AGROFER',
@@ -363,7 +361,7 @@ function VendedorAICard({ vendedor }) {
   })
   const [newRegla, setNewRegla]       = useState('')
   const [newKeyword, setNewKeyword]   = useState('')
-  const [tabActivo, setTabActivo]     = useState('ia')
+  const [tabActivo, setTabActivo]     = useState('conexion')
   const [saved, setSaved] = useState(false)
   const qc = useQueryClient()
 
@@ -374,7 +372,6 @@ function VendedorAICard({ vendedor }) {
         autoReply:    form.autoReply,
         systemPrompt: form.systemPrompt,
       },
-      botActivationKeyword: form.botActivationKeyword,
       tts: { enabled: form.ttsEnabled, voice: form.ttsVoice },
       assistant: {
         nombre:             form.asistNombre,
@@ -413,15 +410,20 @@ function VendedorAICard({ vendedor }) {
     }
   }
 
-  const connected = vendedor.whatsapp?.status === 'connected'
   const metaActiva = vendedor.metaApi?.enabled && vendedor.metaApi?.accessToken
+
+  const TABS = [
+    { key: 'conexion',      label: 'Conexión Meta API' },
+    { key: 'comportamiento', label: 'Comportamiento' },
+    { key: 'personalidad',  label: 'Personalidad y reglas' },
+    { key: 'intenciones',   label: 'Intenciones' },
+  ]
 
   return (
     <div className="card p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-2 h-2 rounded-full shrink-0 ${metaActiva ? 'bg-blue-500' : connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${metaActiva ? 'bg-blue-500' : 'bg-gray-300'}`} />
           <div className="min-w-0">
             <p className="font-semibold text-sm truncate">{vendedor.nombre}</p>
             <p className="text-xs text-gray-400">{vendedor.zona || 'Sin zona'}</p>
@@ -432,262 +434,242 @@ function VendedorAICard({ vendedor }) {
           {form.enabled    && <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-medium">IA activa</span>}
           {form.autoReply  && <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">Auto</span>}
           {form.ttsEnabled && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Voz</span>}
-          {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
         </div>
       </div>
 
-      {expanded && (
-        <div className="border-t border-gray-100">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-100">
-            <button
-              onClick={() => setTabActivo('ia')}
-              className={`px-5 py-3 text-sm font-medium transition-colors ${tabActivo === 'ia' ? 'border-b-2 border-brand text-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-              IA &amp; Voz
-            </button>
-            <button
-              onClick={() => setTabActivo('bot')}
-              className={`px-5 py-3 text-sm font-medium transition-colors ${tabActivo === 'bot' ? 'border-b-2 border-brand text-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-              Comportamiento del Bot
-            </button>
-            <button
-              onClick={() => setTabActivo('intenciones')}
-              className={`px-5 py-3 text-sm font-medium transition-colors ${tabActivo === 'intenciones' ? 'border-b-2 border-brand text-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-              Intenciones
-            </button>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 overflow-x-auto">
+        {TABS.map(t => (
+          <button key={t.key}
+            onClick={() => setTabActivo(t.key)}
+            className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tabActivo === t.key ? 'border-b-2 border-brand text-brand' : 'text-gray-500 hover:text-gray-700'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Conexión Meta API */}
+      {tabActivo === 'conexion' && <MetaAPIPanel vendedor={vendedor} />}
+
+      {/* Tab: Comportamiento */}
+      {tabActivo === 'comportamiento' && (
+        <div className="px-5 py-4 space-y-4">
+          <ToggleRow
+            label="IA habilitada"
+            desc="La IA puede leer y responder mensajes"
+            value={form.enabled}
+            onChange={v => setForm({ ...form, enabled: v })} />
+
+          <ToggleRow
+            label="Respuesta automática"
+            desc="Responde sin intervención manual — el bot envía los mensajes solo"
+            value={form.autoReply}
+            onChange={v => setForm({ ...form, autoReply: v })} />
+
+          <div className="border-t border-gray-100 pt-3 space-y-3">
+            <ToggleRow
+              label="🎤 Responder con nota de voz"
+              desc="Si el cliente manda audio, la IA transcribe y responde con voz"
+              value={form.ttsEnabled}
+              onChange={v => setForm({ ...form, ttsEnabled: v })}
+              highlight="bg-purple-50 border border-purple-200" />
+
+            {form.ttsEnabled && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Voz para esta línea (si no eliges, usa la voz por defecto del sistema)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {TTS_VOICES.map(v => {
+                    const isSel  = form.ttsVoice === v.id
+                    const isPly  = playingVoice  === v.id
+                    const isLoad = loadingVoice  === v.id
+                    return (
+                      <div key={v.id} onClick={() => setForm({ ...form, ttsVoice: v.id })}
+                        className={`rounded-lg border-2 p-2 cursor-pointer transition-all ${
+                          isSel ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-purple-200'
+                        }`}>
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs">{v.emoji}</span>
+                          <p className={`text-xs font-semibold ${isSel ? 'text-purple-800' : 'text-gray-700'}`}>{v.label}</p>
+                        </div>
+                        <button onClick={e => previewVoice(e, v.id)} disabled={isLoad}
+                          className={`w-full text-[10px] py-1 rounded flex items-center justify-center gap-1 transition-colors ${
+                            isPly  ? 'bg-purple-200 text-purple-800'
+                            : isLoad ? 'bg-gray-100 text-gray-400 cursor-wait'
+                            : 'bg-gray-100 hover:bg-purple-100 text-gray-500'
+                          }`}>
+                          {isLoad ? '...' : isPly ? <><Square size={9} /> Stop</> : <><Play size={9} /> Oir</>}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Tab IA & Voz */}
-          {tabActivo === 'ia' && (
-            <div className="px-5 py-4 space-y-4">
-              <ToggleRow
-                label="IA habilitada"
-                desc="La IA puede leer y responder mensajes"
-                value={form.enabled}
-                onChange={v => setForm({ ...form, enabled: v })} />
-
-              <ToggleRow
-                label="Respuesta automática"
-                desc="Responde sin intervención manual — el bot envía los mensajes solo"
-                value={form.autoReply}
-                onChange={v => setForm({ ...form, autoReply: v })} />
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Comando para activar el bot</label>
-                <input className="input text-sm" value={form.botActivationKeyword}
-                  onChange={e => setForm({ ...form, botActivationKeyword: e.target.value })}
-                  placeholder="activar bot" />
-                <p className="text-xs text-gray-400 mt-1">El vendedor escribe esto a su propio numero para encender el bot</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Instrucciones personalizadas</label>
-                <textarea rows={4} className="input resize-none text-xs font-mono"
-                  placeholder="Ej: Eres el asistente de ventas de AGROFER zona Atalaya. Atiende con amabilidad..."
-                  value={form.systemPrompt}
-                  onChange={e => setForm({ ...form, systemPrompt: e.target.value })}
-                  maxLength={3000} />
-                <p className="text-xs text-gray-400 text-right mt-0.5">{form.systemPrompt.length}/3000</p>
-              </div>
-
-              <div className="border-t border-gray-100 pt-3 space-y-3">
-                <ToggleRow
-                  label="🎤 Responder con nota de voz"
-                  desc="Si el cliente manda audio, la IA transcribe y responde con voz"
-                  value={form.ttsEnabled}
-                  onChange={v => setForm({ ...form, ttsEnabled: v })}
-                  highlight="bg-purple-50 border border-purple-200" />
-
-                {form.ttsEnabled && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-2">Voz para esta linea</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {TTS_VOICES.map(v => {
-                        const isSel  = form.ttsVoice === v.id
-                        const isPly  = playingVoice  === v.id
-                        const isLoad = loadingVoice  === v.id
-                        return (
-                          <div key={v.id} onClick={() => setForm({ ...form, ttsVoice: v.id })}
-                            className={`rounded-lg border-2 p-2 cursor-pointer transition-all ${
-                              isSel ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-purple-200'
-                            }`}>
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="text-xs">{v.emoji}</span>
-                              <p className={`text-xs font-semibold ${isSel ? 'text-purple-800' : 'text-gray-700'}`}>{v.label}</p>
-                            </div>
-                            <button onClick={e => previewVoice(e, v.id)} disabled={isLoad}
-                              className={`w-full text-[10px] py-1 rounded flex items-center justify-center gap-1 transition-colors ${
-                                isPly  ? 'bg-purple-200 text-purple-800'
-                                : isLoad ? 'bg-gray-100 text-gray-400 cursor-wait'
-                                : 'bg-gray-100 hover:bg-purple-100 text-gray-500'
-                              }`}>
-                              {isLoad ? '...' : isPly ? <><Square size={9} /> Stop</> : <><Play size={9} /> Oir</>}
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 pt-1">
-                <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
-                  className="btn-primary flex items-center gap-2 text-sm">
-                  <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Tab Intenciones */}
-          {tabActivo === 'intenciones' && (
-            <div className="px-5 py-4 space-y-3">
-              <p className="text-xs text-gray-400">
-                Define que hace el bot cuando detecta cada tipo de mensaje. <strong>Dejar a la IA decidir</strong> es la opcion por defecto.
-              </p>
-              <div className="space-y-1">
-                {INTENTS_LIST.map(intent => {
-                  const accion = form.intentActions[intent.key] || 'ia'
-                  const badge = ACCION_BADGE[accion] || ACCION_BADGE.ia
-                  return (
-                    <div key={intent.key} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-700">{intent.label}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{intent.desc}</p>
-                      </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${badge.cls}`}>
-                        {badge.label}
-                      </span>
-                      <select
-                        value={accion}
-                        onChange={e => setForm({ ...form, intentActions: { ...form.intentActions, [intent.key]: e.target.value } })}
-                        className="input text-xs py-1 w-44 shrink-0">
-                        {ACCIONES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-                      </select>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="flex items-center gap-3 pt-2">
-                <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
-                  className="btn-primary flex items-center gap-2 text-sm">
-                  <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Tab Comportamiento del Bot */}
-          {tabActivo === 'bot' && (
-            <div className="px-5 py-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del asistente</label>
-                  <input className="input text-sm" value={form.asistNombre}
-                    onChange={e => setForm({ ...form, asistNombre: e.target.value })}
-                    placeholder="Asesor Virtual AGROFER" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Max. intentos antes de escalar</label>
-                  <input type="number" min={1} max={20} className="input text-sm" value={form.asistMaxIntentos}
-                    onChange={e => setForm({ ...form, asistMaxIntentos: parseInt(e.target.value) || 5 })} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Rol del asistente</label>
-                <input className="input text-sm" value={form.asistRol}
-                  onChange={e => setForm({ ...form, asistRol: e.target.value })}
-                  placeholder="Ayudar a clientes y resolver dudas." />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Tono de comunicacion</label>
-                <input className="input text-sm" value={form.asistTono}
-                  onChange={e => setForm({ ...form, asistTono: e.target.value })}
-                  placeholder="Cercano, claro y profesional." />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Objetivo principal</label>
-                <textarea rows={2} className="input resize-none text-sm"
-                  value={form.asistObjetivo}
-                  onChange={e => setForm({ ...form, asistObjetivo: e.target.value })}
-                  placeholder="Calificar clientes y conectarlos con vendedores." />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-2">Reglas del bot</label>
-                <div className="space-y-2 mb-2">
-                  {form.asistReglas.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-400 shrink-0 w-4">{i + 1}.</span>
-                      <span className="text-xs text-gray-700 flex-1">{r}</span>
-                      <button onClick={() => setForm({ ...form, asistReglas: form.asistReglas.filter((_, j) => j !== i) })}
-                        className="text-gray-300 hover:text-red-400 shrink-0">
-                        <X size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input className="input text-xs flex-1" value={newRegla}
-                    onChange={e => setNewRegla(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && newRegla.trim()) { setForm({ ...form, asistReglas: [...form.asistReglas, newRegla.trim()] }); setNewRegla('') } }}
-                    placeholder="Agregar regla y presionar Enter..." />
-                  <button onClick={() => { if (newRegla.trim()) { setForm({ ...form, asistReglas: [...form.asistReglas, newRegla.trim()] }); setNewRegla('') } }}
-                    className="btn-secondary px-3">
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <ShieldAlert size={14} className="text-orange-400" />
-                  <label className="text-xs font-medium text-gray-500">Palabras clave para escalar al vendedor</label>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {form.asistEscKeywords.map((kw, i) => (
-                    <span key={i} className="flex items-center gap-1 bg-orange-50 text-orange-700 text-xs px-2 py-1 rounded-full border border-orange-200">
-                      {kw}
-                      <button onClick={() => setForm({ ...form, asistEscKeywords: form.asistEscKeywords.filter((_, j) => j !== i) })}
-                        className="hover:text-red-500 ml-0.5">
-                        <X size={11} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input className="input text-xs flex-1" value={newKeyword}
-                    onChange={e => setNewKeyword(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && newKeyword.trim()) { setForm({ ...form, asistEscKeywords: [...form.asistEscKeywords, newKeyword.trim()] }); setNewKeyword('') } }}
-                    placeholder="ej: reclamo, urgente..." />
-                  <button onClick={() => { if (newKeyword.trim()) { setForm({ ...form, asistEscKeywords: [...form.asistEscKeywords, newKeyword.trim()] }); setNewKeyword('') } }}
-                    className="btn-secondary px-3">
-                    <Plus size={14} />
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">Si el cliente escribe alguna de estas palabras, el bot escala inmediatamente al vendedor</p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-1">
-                <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
-                  className="btn-primary flex items-center gap-2 text-sm">
-                  <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
-                {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-3 pt-1">
+            <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
+              className="btn-primary flex items-center gap-2 text-sm">
+              <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+            {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
+          </div>
         </div>
       )}
 
-      {/* Panel Meta API — solo visible para linea principal */}
-      {expanded && vendedor.esPrincipal && <MetaAPIPanel vendedor={vendedor} />}
+      {/* Tab: Intenciones */}
+      {tabActivo === 'intenciones' && (
+        <div className="px-5 py-4 space-y-3">
+          <p className="text-xs text-gray-400">
+            Define que hace el bot cuando detecta cada tipo de mensaje. <strong>Dejar a la IA decidir</strong> es la opcion por defecto.
+          </p>
+          <div className="space-y-1">
+            {INTENTS_LIST.map(intent => {
+              const accion = form.intentActions[intent.key] || 'ia'
+              const badge = ACCION_BADGE[accion] || ACCION_BADGE.ia
+              return (
+                <div key={intent.key} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-700">{intent.label}</p>
+                    <p className="text-[11px] text-gray-400 truncate">{intent.desc}</p>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${badge.cls}`}>
+                    {badge.label}
+                  </span>
+                  <select
+                    value={accion}
+                    onChange={e => setForm({ ...form, intentActions: { ...form.intentActions, [intent.key]: e.target.value } })}
+                    className="input text-xs py-1 w-44 shrink-0">
+                    {ACCIONES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                  </select>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
+              className="btn-primary flex items-center gap-2 text-sm">
+              <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+            {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Personalidad y reglas */}
+      {tabActivo === 'personalidad' && (
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del asistente</label>
+              <input className="input text-sm" value={form.asistNombre}
+                onChange={e => setForm({ ...form, asistNombre: e.target.value })}
+                placeholder="Asesor Virtual AGROFER" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Max. intentos antes de escalar</label>
+              <input type="number" min={1} max={20} className="input text-sm" value={form.asistMaxIntentos}
+                onChange={e => setForm({ ...form, asistMaxIntentos: parseInt(e.target.value) || 5 })} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Rol del asistente</label>
+            <input className="input text-sm" value={form.asistRol}
+              onChange={e => setForm({ ...form, asistRol: e.target.value })}
+              placeholder="Ayudar a clientes y resolver dudas." />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Tono de comunicacion</label>
+            <input className="input text-sm" value={form.asistTono}
+              onChange={e => setForm({ ...form, asistTono: e.target.value })}
+              placeholder="Cercano, claro y profesional." />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Objetivo principal</label>
+            <textarea rows={2} className="input resize-none text-sm"
+              value={form.asistObjetivo}
+              onChange={e => setForm({ ...form, asistObjetivo: e.target.value })}
+              placeholder="Calificar clientes y conectarlos con vendedores." />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Reglas del bot</label>
+            <div className="space-y-2 mb-2">
+              {form.asistReglas.map((r, i) => (
+                <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                  <span className="text-xs text-gray-400 shrink-0 w-4">{i + 1}.</span>
+                  <span className="text-xs text-gray-700 flex-1">{r}</span>
+                  <button onClick={() => setForm({ ...form, asistReglas: form.asistReglas.filter((_, j) => j !== i) })}
+                    className="text-gray-300 hover:text-red-400 shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input className="input text-xs flex-1" value={newRegla}
+                onChange={e => setNewRegla(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && newRegla.trim()) { setForm({ ...form, asistReglas: [...form.asistReglas, newRegla.trim()] }); setNewRegla('') } }}
+                placeholder="Agregar regla y presionar Enter..." />
+              <button onClick={() => { if (newRegla.trim()) { setForm({ ...form, asistReglas: [...form.asistReglas, newRegla.trim()] }); setNewRegla('') } }}
+                className="btn-secondary px-3">
+                <Plus size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldAlert size={14} className="text-orange-400" />
+              <label className="text-xs font-medium text-gray-500">Palabras clave para escalar al vendedor</label>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {form.asistEscKeywords.map((kw, i) => (
+                <span key={i} className="flex items-center gap-1 bg-orange-50 text-orange-700 text-xs px-2 py-1 rounded-full border border-orange-200">
+                  {kw}
+                  <button onClick={() => setForm({ ...form, asistEscKeywords: form.asistEscKeywords.filter((_, j) => j !== i) })}
+                    className="hover:text-red-500 ml-0.5">
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input className="input text-xs flex-1" value={newKeyword}
+                onChange={e => setNewKeyword(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && newKeyword.trim()) { setForm({ ...form, asistEscKeywords: [...form.asistEscKeywords, newKeyword.trim()] }); setNewKeyword('') } }}
+                placeholder="ej: reclamo, urgente..." />
+              <button onClick={() => { if (newKeyword.trim()) { setForm({ ...form, asistEscKeywords: [...form.asistEscKeywords, newKeyword.trim()] }); setNewKeyword('') } }}
+                className="btn-secondary px-3">
+                <Plus size={14} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Si el cliente escribe alguna de estas palabras, el bot escala inmediatamente al vendedor</p>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Instrucciones adicionales (opcional)</label>
+            <p className="text-xs text-gray-400 mb-2">Se suman a la personalidad de arriba — úsalo para casos puntuales que las reglas no cubren.</p>
+            <textarea rows={4} className="input resize-none text-xs font-mono"
+              placeholder="Ej: Si preguntan por envíos a Venezuela, aclarar que solo se hace contraentrega..."
+              value={form.systemPrompt}
+              onChange={e => setForm({ ...form, systemPrompt: e.target.value })}
+              maxLength={3000} />
+            <p className="text-xs text-gray-400 text-right mt-0.5">{form.systemPrompt.length}/3000</p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button onClick={() => guardar.mutate()} disabled={guardar.isPending}
+              className="btn-primary flex items-center gap-2 text-sm">
+              <Save size={13} /> {guardar.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+            {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Guardado</span>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -725,7 +707,7 @@ function MetaAPIPanel({ vendedor }) {
   const webhookUrl = `${window.location.origin.replace(':5173', ':3000')}/webhook/meta`
 
   return (
-    <div className="border-t border-gray-100 px-5 py-4 space-y-4">
+    <div className="px-5 py-4 space-y-4">
       <ToggleRow
         label={<span className="flex items-center gap-2"><Globe size={13} className="text-blue-500" /> Meta WhatsApp Business API <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">API Oficial</span></span>}
         desc="Activa cuando tengas credenciales de Meta Business Suite"
@@ -863,7 +845,7 @@ export default function AIConfigPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {vendedores.map(v => <VendedorAICard key={v._id} vendedor={v} />)}
+          {vendedores.map(v => <LineaConfig key={v._id} vendedor={v} />)}
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     Conversation.find(query)
       .populate({
         path: 'customer',
-        select: 'name phone zona ciudad direccion empresa sector temperatura potencial cupoCredito plazo vendedorId',
+        select: 'name phone zona ciudad direccion empresa sector temperatura potencial cupoCredito plazo vendedorId nit idSistemaPrincipal',
         populate: { path: 'vendedorId', select: 'nombre' },
       })
       .populate('lead', 'name phone status')
@@ -204,6 +204,76 @@ router.post('/:id/media', async (req, res) => {
   const io = req.app.get('io')
   io.to(`vendedor:${vendedorId}`).emit('message:new', { conversation: conversation._id, message })
   res.status(201).json({ message })
+})
+
+// POST /api/conversations/:id/enviar-cartera — consulta el estado de cartera del
+// cliente en Sistema Principal, genera el PDF y lo envía por WhatsApp con un mensaje
+// recordando el pago.
+router.post('/:id/enviar-cartera', async (req, res) => {
+  const Customer = require('../models/Customer')
+  const { obtenerCartera }  = require('../services/cartera.service')
+  const { generarCarteraPDF } = require('../services/cartera-pdf.service')
+
+  const conversation = await Conversation.findById(req.params.id).populate('customer')
+  if (!conversation) return res.status(404).json({ error: 'Conversación no encontrada' })
+  const customer = conversation.customer
+  if (!customer) return res.status(400).json({ error: 'Esta conversación no está vinculada a un cliente' })
+
+  let cartera
+  try {
+    cartera = await obtenerCartera(customer)
+  } catch (e) {
+    return res.status(400).json({ error: e.message })
+  }
+
+  const vendedorId = conversation.tenantId?.toString()
+  const Tenant = require('../models/Tenant')
+  const tenant = await Tenant.findById(vendedorId).lean()
+  if (!tenant) return res.status(404).json({ error: 'Línea no encontrada' })
+  if (!process.env.PUBLIC_URL) return res.status(500).json({ error: 'PUBLIC_URL no configurado en el servidor' })
+  const usaMeta = tenant.metaApi?.enabled && tenant.metaApi?.accessToken
+  if (!usaMeta) return res.status(400).json({ error: 'Esta línea no tiene Meta API habilitada' })
+  if (!conversation.phone) return res.status(400).json({ error: 'Conversación sin número de destino válido' })
+
+  const pdfBuffer = await generarCarteraPDF(customer, cartera)
+
+  const fs   = require('fs')
+  const path = require('path')
+  const safeName = `cartera_${Date.now()}_${String(customer._id)}.pdf`
+  const uploadDir = path.join(__dirname, '../../uploads')
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+  fs.writeFileSync(path.join(uploadDir, safeName), pdfBuffer)
+  const mediaUrl = `/media/${safeName}`
+  const publicMediaUrl = `${process.env.PUBLIC_URL}${mediaUrl}`
+
+  const caption = cartera.facturas.length
+    ? `Hola ${customer.name || ''}, te recordamos que tienes un saldo pendiente de $${Math.round(cartera.total).toLocaleString('es-CO')} con AGROFER. Adjunto el detalle de tu cartera.`
+    : `Hola ${customer.name || ''}, este es tu estado de cartera con AGROFER — no tienes saldos pendientes. ¡Gracias por tu confianza!`
+
+  const provider = require('../services/message-provider.service')
+  const metaResult = await provider.sendDocument(tenant, vendedorId, conversation.phone, publicMediaUrl, `Estado_Cartera_${(customer.name || 'cliente').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`, caption)
+  if (metaResult?.ok === false) {
+    return res.status(502).json({ error: metaResult.error || 'Error enviando el PDF por Meta API' })
+  }
+
+  const message = await Message.create({
+    tenantId: conversation.tenantId,
+    conversation: conversation._id,
+    direction: 'outbound',
+    content: caption,
+    type: 'document',
+    mediaUrl,
+    mediaType: 'application/pdf',
+    fileName: `Estado_Cartera_${(customer.name || 'cliente').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+    fileSize: pdfBuffer.length,
+    sentBy: req.user._id,
+    aiGenerated: false,
+    whatsappMsgId: metaResult?.messageId || undefined,
+  })
+
+  const io = req.app.get('io')
+  io.to(`vendedor:${vendedorId}`).emit('message:new', { conversation: conversation._id, message })
+  res.status(201).json({ message, cartera })
 })
 
 router.patch('/:id', async (req, res) => {

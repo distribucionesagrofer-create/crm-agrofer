@@ -30,13 +30,24 @@ const ZONAS_COORDS = {
   'MOSTRADOR SEDE':   [[7.8960,-72.5090],[7.8960,-72.5000],[7.8880,-72.5000],[7.8880,-72.5090]],
 }
 
+// Pin estilo Google Maps (gota con punta abajo) en vez de un punto plano — mismo
+// color para todos (ver COLOR_UNICO), solo cambia el tamaño y si está destacado.
 function makeIcon(color, size, selected) {
-  const border = selected ? 3 : 2
-  const shadow = selected ? `0 0 0 3px ${color}33, 0 2px 6px rgba(0,0,0,.4)` : '0 1px 4px rgba(0,0,0,.35)'
+  const w = size, h = Math.round(size * 1.35)
+  const strokeW = selected ? 2.5 : 1.5
+  const html = `
+    <svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg"
+      style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));transition:all .2s">
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z"
+        fill="${color}" stroke="white" stroke-width="${strokeW}" />
+      <circle cx="12" cy="12" r="4.5" fill="white" />
+    </svg>`
   return L.divIcon({
     className: '',
-    html: `<div style="background:${color};border:${border}px solid white;width:${size}px;height:${size}px;border-radius:50%;box-shadow:${shadow};transition:all .2s"></div>`,
-    iconSize: [size, size], iconAnchor: [size/2, size/2],
+    html,
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h],
+    popupAnchor: [0, -h + 4],
   })
 }
 

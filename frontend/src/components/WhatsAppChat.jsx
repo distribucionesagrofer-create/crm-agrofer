@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, Paperclip, X, RefreshCw, Check, CheckCheck,
   ChevronLeft, User, StickyNote, Bot,
-  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause, Users, MapPin, Building2, Wallet,
+  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause, Users, MapPin, Building2, Wallet, FileText,
 } from 'lucide-react'
 import api from '../services/api'
 import { socket } from '../services/socket'
@@ -52,6 +52,12 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
     mutationFn: () => leadId ? api.post(`/leads/${leadId}/convertir`) : Promise.reject('No lead'),
     onSuccess: (r) => { alert(r.message); qc.invalidateQueries(['convs-inbox']) },
     onError: (e) => alert(e?.error || 'Error'),
+  })
+
+  const enviarCartera = useMutation({
+    mutationFn: () => api.post(`/conversations/${conversation._id}/enviar-cartera`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['chat-msgs', conversation._id], exact: false }),
+    onError: (e) => alert(e?.error || 'Error enviando la cartera'),
   })
 
   const ESTADOS_LEAD = [
@@ -161,7 +167,7 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
         )}
 
         {/* Datos del cliente — solo si está vinculado a un Customer real */}
-        {!isLead && contact && (contact.zona || contact.ciudad || contact.direccion || contact.empresa || contact.vendedorId || contact.temperatura || contact.potencial) && (
+        {!isLead && contact && (contact.zona || contact.ciudad || contact.direccion || contact.empresa || contact.vendedorId || contact.temperatura || contact.potencial || contact.idSistemaPrincipal) && (
           <div className="px-4 py-3 border-b border-gray-800 space-y-2">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Datos del cliente</p>
             {(contact.ciudad || contact.zona) && (
@@ -200,6 +206,12 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 capitalize">potencial {contact.potencial}</span>
                 )}
               </div>
+            )}
+            {contact.idSistemaPrincipal && (
+              <button onClick={() => enviarCartera.mutate()} disabled={enviarCartera.isPending}
+                className="w-full mt-1 flex items-center justify-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs py-2 rounded-lg font-medium transition-colors disabled:opacity-40">
+                <FileText size={13} /> {enviarCartera.isPending ? 'Generando y enviando...' : 'Enviar estado de cartera'}
+              </button>
             )}
           </div>
         )}
