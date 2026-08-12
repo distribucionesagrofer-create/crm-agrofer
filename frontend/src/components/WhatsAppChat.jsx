@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, Paperclip, X, RefreshCw, Check, CheckCheck,
   ChevronLeft, User, StickyNote, Bot,
-  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause, Users, MapPin, Building2, Wallet, FileText,
+  Download, UserCheck, Phone, Sparkles, Lock, Unlock, PowerOff, AlertTriangle, UserX, UserPlus, Zap, Search, Tag, Plus, Trash2, Smile, Play, Pause, Users, MapPin, Building2, Wallet, FileText, Eye,
 } from 'lucide-react'
 import api from '../services/api'
 import { socket } from '../services/socket'
@@ -59,6 +59,19 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['chat-msgs', conversation._id], exact: false }),
     onError: (e) => alert(e?.error || 'Error enviando la cartera'),
   })
+
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const verPreviewCartera = async () => {
+    setPreviewLoading(true)
+    try {
+      const blob = await api.get(`/conversations/${conversation._id}/cartera-preview`, { responseType: 'blob' })
+      window.open(URL.createObjectURL(blob), '_blank')
+    } catch {
+      alert('No se pudo generar la vista previa — revisa que el cliente tenga id de Sistema Principal')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
 
   const ESTADOS_LEAD = [
     { value: 'nuevo',       label: 'Nuevo',       color: 'bg-blue-100 text-blue-700' },
@@ -208,10 +221,16 @@ function ContactPanel({ conversation, onClose, onConvUpdated }) {
               </div>
             )}
             {contact.idSistemaPrincipal && (
-              <button onClick={() => enviarCartera.mutate()} disabled={enviarCartera.isPending}
-                className="w-full mt-1 flex items-center justify-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs py-2 rounded-lg font-medium transition-colors disabled:opacity-40">
-                <FileText size={13} /> {enviarCartera.isPending ? 'Generando y enviando...' : 'Enviar estado de cartera'}
-              </button>
+              <div className="flex gap-1.5 mt-1">
+                <button onClick={verPreviewCartera} disabled={previewLoading}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-700/40 hover:bg-gray-700/60 text-gray-300 text-xs py-2 rounded-lg font-medium transition-colors disabled:opacity-40">
+                  <Eye size={13} /> {previewLoading ? 'Generando...' : 'Vista previa'}
+                </button>
+                <button onClick={() => enviarCartera.mutate()} disabled={enviarCartera.isPending}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs py-2 rounded-lg font-medium transition-colors disabled:opacity-40">
+                  <FileText size={13} /> {enviarCartera.isPending ? 'Enviando...' : 'Enviar'}
+                </button>
+              </div>
             )}
           </div>
         )}

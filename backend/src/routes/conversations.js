@@ -206,6 +206,30 @@ router.post('/:id/media', async (req, res) => {
   res.status(201).json({ message })
 })
 
+// GET /api/conversations/:id/cartera-preview — genera el PDF y lo devuelve directo
+// (sin enviarlo por WhatsApp) para poder revisar el diseño antes de mandarlo a un cliente real.
+router.get('/:id/cartera-preview', async (req, res) => {
+  const { obtenerCartera }  = require('../services/cartera.service')
+  const { generarCarteraPDF } = require('../services/cartera-pdf.service')
+
+  const conversation = await Conversation.findById(req.params.id).populate('customer')
+  if (!conversation) return res.status(404).json({ error: 'Conversación no encontrada' })
+  const customer = conversation.customer
+  if (!customer) return res.status(400).json({ error: 'Esta conversación no está vinculada a un cliente' })
+
+  let cartera
+  try {
+    cartera = await obtenerCartera(customer)
+  } catch (e) {
+    return res.status(400).json({ error: e.message })
+  }
+
+  const pdfBuffer = await generarCarteraPDF(customer, cartera)
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename="Estado_Cartera_${(customer.name || 'cliente').replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`)
+  res.send(pdfBuffer)
+})
+
 // POST /api/conversations/:id/enviar-cartera — consulta el estado de cartera del
 // cliente en Sistema Principal, genera el PDF y lo envía por WhatsApp con un mensaje
 // recordando el pago.
