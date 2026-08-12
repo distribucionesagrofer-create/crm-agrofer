@@ -35,9 +35,12 @@ const ZONAS_COORDS = {
 function makeIcon(color, size, selected) {
   const w = size, h = Math.round(size * 1.35)
   const strokeW = selected ? 2.5 : 1.5
+  // Destacado: pulso continuo desde la punta (el ancla real del pin), no desde el
+  // centro del SVG, para que "lata" en su sitio en vez de flotar hacia un lado.
+  const animStyle = selected ? 'animation:pin-pulse 1s ease-in-out infinite;transform-origin:bottom center;' : ''
   const html = `
     <svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg"
-      style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));transition:all .2s">
+      style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));transition:width .2s,height .2s;${animStyle}">
       <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z"
         fill="${color}" stroke="white" stroke-width="${strokeW}" />
       <circle cx="12" cy="12" r="4.5" fill="white" />

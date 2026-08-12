@@ -8,6 +8,12 @@
   }
 }
 
+/* Pin del mapa de clientes destacado — pulso suave para que se note cuál es */
+@keyframes pin-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
 @layer components {
   .btn-primary {
     @apply bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors font-medium;
