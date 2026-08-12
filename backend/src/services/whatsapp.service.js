@@ -1843,6 +1843,7 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
         : { tenantId, phone, status: { $in: ['open', 'closed', 'pending'] } }
 
     conversation = await Conversation.findOne(convQuery).sort({ createdAt: -1 })
+    const esPrimerMensaje = !conversation
 
     if (!conversation) {
       const convData = { tenantId, phone, aiEnabled: tenant.ai?.autoReply ?? false, lastMessageAt: new Date() }
@@ -1939,6 +1940,37 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
         )
       } catch (_) {}
     }
+
+    // Ejecutar flujos de trabajo (guiones estructurados: bienvenida, keywords tipo
+    // "catálogo", captura de datos, etc.) — antes esto SOLO corría en el canal viejo de
+    // whatsapp-web.js; la línea principal (Meta API, la única con tráfico real hoy)
+    // nunca lo ejecutaba, así que cualquier flujo activo no hacía absolutamente nada.
+    let pasarAIAFlujo = true
+    if (text) {
+      try {
+        const resultadoFlujo = await ejecutarFlujo({
+          tenantId,
+          phone,
+          texto:           text,
+          esPrimerMensaje,
+          esLead:          contactType === 'lead',
+          conversacionId:  conversation._id,
+        })
+
+        if (resultadoFlujo.ejecutado) {
+          const { ejecutarAccionesFlujo } = require('./flow-actions.service')
+          const { pasarAIA } = await ejecutarAccionesFlujo({
+            tenant, tenantId, phone, waJid: null,
+            acciones: resultadoFlujo.acciones, conversacionId: conversation._id,
+            contactType, contactId, io, chat: null,
+          })
+          pasarAIAFlujo = pasarAIA
+        }
+      } catch (err) {
+        console.error('[META-HANDLER] Error ejecutando flujo:', err.message)
+      }
+    }
+    if (!pasarAIAFlujo) return
 
     // Ejecutar orquestador si IA esta activa
     const aiBlocked = !tenant.ai?.enabled || !tenant.ai?.autoReply || !conversation.aiEnabled
