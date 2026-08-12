@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Wallet, RefreshCw, Eye, Send, MessageSquare, Clock, AlertTriangle } from 'lucide-react'
+import { Wallet, RefreshCw, Eye, Send, MessageSquare, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import api from '../services/api'
 
 const ESTADO_BADGE = {
@@ -9,6 +9,28 @@ const ESTADO_BADGE = {
   entregado: { label: 'Entregado', cls: 'bg-indigo-100 text-indigo-700' },
   leido:     { label: 'Leído',     cls: 'bg-green-100 text-green-700' },
   fallido:   { label: 'Fallido',   cls: 'bg-red-100 text-red-600' },
+}
+
+// Buckets pensados para los umbrales del futuro recordatorio automático (15/10/5/1 día)
+const BUCKETS = [
+  { key: 'todos',   label: 'Todos' },
+  { key: 'vencida', label: 'Vencidas' },
+  { key: 'dia_1',   label: 'Vence en ≤1 día' },
+  { key: 'dia_5',   label: 'Vence en ≤5 días' },
+  { key: 'dia_10',  label: 'Vence en 6-10 días' },
+  { key: 'dia_15',  label: 'Vence en 11-15 días' },
+  { key: 'mas_15',  label: 'Vence en +15 días' },
+]
+
+function bucketDe(diasVcto) {
+  if (diasVcto == null) return null
+  if (diasVcto > 0) return 'vencida'
+  const restan = Math.abs(diasVcto)
+  if (restan <= 1) return 'dia_1'
+  if (restan <= 5) return 'dia_5'
+  if (restan <= 10) return 'dia_10'
+  if (restan <= 15) return 'dia_15'
+  return 'mas_15'
 }
 
 function fmtMoney(n) {
@@ -34,10 +56,14 @@ function EstadoEnvio({ envio }) {
   )
 }
 
+const POR_PAGINA = 25
+
 export default function CarteraPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [busqueda, setBusqueda] = useState('')
+  const [bucketActivo, setBucketActivo] = useState('todos')
+  const [pagina, setPagina] = useState(1)
   const [enviandoId, setEnviandoId] = useState(null)
   const [previewId, setPreviewId] = useState(null)
 
@@ -55,14 +81,36 @@ export default function CarteraPage() {
     onSuccess: () => qc.invalidateQueries(['cartera']),
   })
 
-  const filtrados = clientes.filter(c => {
-    if (!busqueda) return true
-    const s = busqueda.toLowerCase()
-    return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s)
-  })
+  const conteoPorBucket = useMemo(() => {
+    const c = { todos: clientes.length }
+    for (const b of BUCKETS) if (b.key !== 'todos') c[b.key] = 0
+    for (const cli of clientes) {
+      const b = bucketDe(cli.proximoVencimiento?.diasVcto)
+      if (b) c[b] = (c[b] || 0) + 1
+    }
+    return c
+  }, [clientes])
+
+  const filtrados = useMemo(() => {
+    let lista = clientes
+    if (bucketActivo !== 'todos') {
+      lista = lista.filter(c => bucketDe(c.proximoVencimiento?.diasVcto) === bucketActivo)
+    }
+    if (busqueda) {
+      const s = busqueda.toLowerCase()
+      lista = lista.filter(c => (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s))
+    }
+    return lista
+  }, [clientes, bucketActivo, busqueda])
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const pagados = filtrados.slice((paginaSegura - 1) * POR_PAGINA, paginaSegura * POR_PAGINA)
+
+  const cambiarBucket = (key) => { setBucketActivo(key); setPagina(1) }
 
   const totalPendiente = clientes.reduce((s, c) => s + (c.carteraTotal || 0), 0)
-  const vencidas = clientes.filter(c => c.proximoVencimiento?.diasVcto > 0).length
+  const totalPendienteFiltrado = filtrados.reduce((s, c) => s + (c.carteraTotal || 0), 0)
 
   const verPreview = async (customerId) => {
     setPreviewId(customerId)
@@ -127,13 +175,35 @@ export default function CarteraPage() {
           <p className="text-2xl font-black text-gray-900">{fmtMoney(totalPendiente)}</p>
         </div>
         <div className="card p-4">
-          <p className="text-xs text-gray-400 flex items-center gap-1"><AlertTriangle size={11} className="text-red-500" /> Con facturas vencidas</p>
-          <p className="text-2xl font-black text-red-600">{vencidas}</p>
+          <p className="text-xs text-gray-400">Vencidas</p>
+          <p className="text-2xl font-black text-red-600">{conteoPorBucket.vencida || 0}</p>
         </div>
       </div>
 
-      <input className="input text-sm max-w-sm" placeholder="Buscar cliente o teléfono..."
-        value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+      {/* Filtro por cercanía al vencimiento — mismos umbrales del recordatorio automático */}
+      <div className="flex gap-1.5 flex-wrap">
+        {BUCKETS.map(b => (
+          <button key={b.key} onClick={() => cambiarBucket(b.key)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+              bucketActivo === b.key ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {b.label}
+            <span className={`text-[10px] font-bold ${bucketActivo === b.key ? 'opacity-80' : 'text-gray-400'}`}>
+              {conteoPorBucket[b.key] || 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <input className="input text-sm max-w-sm" placeholder="Buscar cliente o teléfono..."
+          value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1) }} />
+        {bucketActivo !== 'todos' && (
+          <p className="text-xs text-gray-400">
+            {filtrados.length} clientes · {fmtMoney(totalPendienteFiltrado)} en este filtro
+          </p>
+        )}
+      </div>
 
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
@@ -150,12 +220,12 @@ export default function CarteraPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={6} className="text-center text-gray-400 py-8 text-xs">Cargando...</td></tr>}
-              {!isLoading && !filtrados.length && (
+              {!isLoading && !pagados.length && (
                 <tr><td colSpan={6} className="text-center text-gray-400 py-8 text-xs">
-                  {clientes.length ? 'Sin resultados' : 'Sin cartera pendiente en caché — usa "Sincronizar" para traerla de Sistema Principal'}
+                  {clientes.length ? 'Sin resultados con este filtro' : 'Sin cartera pendiente en caché — usa "Sincronizar" para traerla de Sistema Principal'}
                 </td></tr>
               )}
-              {filtrados.map(c => {
+              {pagados.map(c => {
                 const dias = c.proximoVencimiento?.diasVcto
                 const vencida = dias > 0
                 return (
@@ -195,6 +265,24 @@ export default function CarteraPage() {
             </tbody>
           </table>
         </div>
+
+        {filtrados.length > POR_PAGINA && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-50">
+            <p className="text-xs text-gray-400">
+              Página {paginaSegura} de {totalPaginas} · {filtrados.length} clientes
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={paginaSegura === 1}
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-30">
+                <ChevronLeft size={14} />
+              </button>
+              <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={paginaSegura === totalPaginas}
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-30">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
