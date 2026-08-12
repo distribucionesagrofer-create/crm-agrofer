@@ -13,6 +13,7 @@ const Message    = require('../models/Message')
 const Plantilla  = require('../models/PlantillaWhatsApp')
 const Broadcast             = require('../models/Broadcast')
 const BroadcastDestinatario = require('../models/BroadcastDestinatario')
+const CarteraEnvio          = require('../models/CarteraEnvio')
 const { parseIncomingWebhook } = require('../services/meta-api.service')
 const audit = require('../services/audit.service')
 
@@ -82,6 +83,26 @@ async function actualizarBroadcastDestinatario(whatsappMsgId, metaStatus) {
   if (dest) {
     await Broadcast.findByIdAndUpdate(dest.broadcastId, { $inc: { [campoContador]: 1 } })
   }
+}
+
+// Mismo patrón que arriba pero para los recordatorios de cartera.
+async function actualizarCarteraEnvio(whatsappMsgId, metaStatus) {
+  let campoEstado, campoFecha, estadosPrevios
+  if (metaStatus === 'delivered') {
+    campoEstado = 'entregado'; campoFecha = 'entregadoAt'; estadosPrevios = ['enviado']
+  } else if (metaStatus === 'read') {
+    campoEstado = 'leido'; campoFecha = 'leidoAt'; estadosPrevios = ['enviado', 'entregado']
+  } else if (metaStatus === 'failed') {
+    campoEstado = 'fallido'; campoFecha = null; estadosPrevios = ['enviado', 'entregado', 'leido']
+  } else {
+    return
+  }
+  const set = { estado: campoEstado }
+  if (campoFecha) set[campoFecha] = new Date()
+  await CarteraEnvio.findOneAndUpdate(
+    { whatsappMsgId, estado: { $in: estadosPrevios } },
+    { $set: set }
+  )
 }
 
 router.post('/', async (req, res) => {
@@ -162,6 +183,7 @@ router.post('/', async (req, res) => {
         if (!mapped) continue
         await Message.findOneAndUpdate({ whatsappMsgId: st.id }, { status: mapped }).catch(() => {})
         await actualizarBroadcastDestinatario(st.id, st.status).catch(() => {})
+        await actualizarCarteraEnvio(st.id, st.status).catch(() => {})
       }
       return
     }

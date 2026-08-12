@@ -1922,6 +1922,24 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
       if (bDest) await Broadcast.findByIdAndUpdate(bDest.broadcastId, { $inc: { respondieron: 1 } })
     } catch (_) {}
 
+    // Marcar respondio en el ultimo recordatorio de cartera de este cliente (si tiene)
+    if (contactType === 'customer') {
+      try {
+        const CarteraEnvio = require('../models/CarteraEnvio')
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        await CarteraEnvio.findOneAndUpdate(
+          {
+            customerId: contactId,
+            estado: { $in: ['enviado', 'entregado', 'leido'] },
+            respondio: false,
+            createdAt: { $gte: sevenDaysAgo },
+          },
+          { respondio: true, respondioAt: new Date() },
+          { sort: { createdAt: -1 } }
+        )
+      } catch (_) {}
+    }
+
     // Ejecutar orquestador si IA esta activa
     const aiBlocked = !tenant.ai?.enabled || !tenant.ai?.autoReply || !conversation.aiEnabled
     if (aiBlocked || !text) return

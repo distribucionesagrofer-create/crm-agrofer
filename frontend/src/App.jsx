@@ -44,6 +44,7 @@ import AutomationsPage from './pages/AutomationsPage'
 import AuditoriaPage from './pages/AuditoriaPage'
 import MerchandisingPage from './pages/MerchandisingPage'
 import PublicidadPage from './pages/PublicidadPage'
+import CarteraPage from './pages/CarteraPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="auditoria" element={<AuditoriaPage />} />
           <Route path="merchandising" element={<MerchandisingPage />} />
+          <Route path="cartera" element={<CarteraPage />} />
           <Route path="publicidad" element={<PublicidadPage />} />
         </Route>
       </Routes>

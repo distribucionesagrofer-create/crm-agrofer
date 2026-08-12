@@ -40,6 +40,19 @@ const customerSchema = new mongoose.Schema({
   departamento:          { type: String, trim: true, default: '' },
   representanteLegal:    { type: String, trim: true, default: '' },
 
+  // Caché de cartera (facturas pendientes) — se sincroniza periódicamente contra
+  // Sistema Principal (get_cartera) en vez de consultarse en vivo en cada carga,
+  // porque son cientos de clientes con crédito y cada consulta es una llamada externa.
+  carteraFacturas: {
+    type: [{
+      documento: String, detalle: String, fecha: String, vence: String,
+      diasVcto: Number, valor: Number, saldo: Number, _id: false,
+    }],
+    default: [],
+  },
+  carteraTotal:         { type: Number, default: 0 },
+  carteraActualizadoAt: { type: Date },
+
   // Estado y control
   active:        { type: Boolean, default: true },
   importado:     { type: Boolean, default: false },
