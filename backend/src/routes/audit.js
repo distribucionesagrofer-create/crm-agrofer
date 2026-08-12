@@ -23,6 +23,10 @@ router.get('/', authenticate, async (req, res) => {
       canal:      metaActiva ? 'meta' : 'whatsapp-web',
       phone:      t.whatsapp?.phone || null,
       connectedAt: t.whatsapp?.connectedAt || null,
+      // Tiene sesión guardada (ya se conectó al menos una vez) — aunque ahora mismo no
+      // esté "connected" en memoria, no es lo mismo que nunca haberse configurado (las
+      // líneas de Estados Rotación se desconectan a propósito tras publicar).
+      synced:     !!t.whatsapp?.connectedAt,
     }
   })
 

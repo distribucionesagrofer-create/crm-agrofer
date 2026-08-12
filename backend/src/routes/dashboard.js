@@ -39,7 +39,18 @@ router.get('/', async (req, res) => {
     lineas,
   ] = await Promise.all([
     Tenant.countDocuments({ activo: true }),
-    Tenant.countDocuments({ activo: true, 'whatsapp.status': 'connected' }),
+    // "Sincronizada" = tiene credenciales/sesión válidas guardadas, no necesariamente
+    // conectada en este instante — las líneas por QR se conectan solo por ratos (Estados
+    // Rotación) y la línea principal usa Meta API, que no depende de whatsapp.status en
+    // absoluto. Contar solo 'connected' ahora mismo mostraba 0/14 casi siempre aunque
+    // todo estuviera bien configurado.
+    Tenant.countDocuments({
+      activo: true,
+      $or: [
+        { 'metaApi.enabled': true, 'metaApi.accessToken': { $ne: '' } },
+        { 'whatsapp.connectedAt': { $ne: null } },
+      ],
+    }),
     Customer.countDocuments({ active: true }),
     Customer.countDocuments({ active: true, $or: [{ lastContactAt: null }, { lastContactAt: { $lt: hace30dias } }] }),
     Conversation.countDocuments({ status: 'open' }),

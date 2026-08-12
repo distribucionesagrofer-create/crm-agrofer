@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Smartphone, Users, Bot, BookOpen, LogOut, Zap, Map, BarChart2, UserCheck, Inbox, GitBranch, Bell, ShieldCheck, ShirtIcon, Radio, Package, FileText, Send } from 'lucide-react'
+import { LayoutDashboard, Smartphone, Users, Bot, BookOpen, LogOut, Zap, Map, BarChart2, UserCheck, Inbox, GitBranch, ShieldCheck, ShirtIcon, Radio, Package, FileText, Send } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import clsx from 'clsx'
 import { ScreencastProvider } from '../../contexts/ScreencastContext'
@@ -25,7 +25,6 @@ const NAV_CONFIG = [
   navItem('/flujos',          GitBranch,   'Flujos de trabajo'),
   navItem('/plantillas',      FileText,    'Plantillas WhatsApp'),
   navItem('/ia-config',       Bot,         'Configuración IA'),
-  navItem('/notificaciones',  Bell,        'Notificaciones'),
   navItem('/quick-replies',   Zap,         'Respuestas rápidas'),
   navItem('/knowledge',       BookOpen,    'Base FAQ'),
   navItem('/auditoria',       ShieldCheck, 'Auditoría Sistema'),

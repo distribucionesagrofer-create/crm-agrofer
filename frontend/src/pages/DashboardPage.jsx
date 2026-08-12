@@ -126,9 +126,9 @@ export default function DashboardPage() {
 
       {/* ── Fila 1: stats principales ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat icon={Smartphone} label="WhatsApp activos"
+        <Stat icon={Smartphone} label="Líneas WhatsApp"
           value={isLoading ? '…' : `${s.vendedoresConectados ?? 0}/${s.totalVendedores ?? 0}`}
-          sub="líneas conectadas" color="bg-green-500"
+          sub="sincronizadas" color="bg-green-500"
           onClick={() => navigate('/vendedores')} />
         <Stat icon={Users} label="Total clientes"
           value={isLoading ? '…' : s.totalClientes ?? 0}

@@ -831,7 +831,9 @@ export default function AIConfigPage() {
     queryFn: () => api.get('/vendedores'),
   })
 
-  const vendedores = data?.vendedores || []
+  // Solo la línea principal (Meta API) maneja chat en vivo — las demás no necesitan
+  // configuración de IA propia.
+  const vendedores = (data?.vendedores || []).filter(v => v.slug === 'linea-principal')
 
   return (
     <div className="p-6 max-w-3xl space-y-5">
@@ -841,7 +843,7 @@ export default function AIConfigPage() {
         </div>
         <div>
           <h2 className="text-xl font-bold">Configuracion IA</h2>
-          <p className="text-sm text-gray-400">Token, voz y configuracion de IA por linea WhatsApp</p>
+          <p className="text-sm text-gray-400">Token, voz y configuracion de IA de la linea principal</p>
         </div>
       </div>
 

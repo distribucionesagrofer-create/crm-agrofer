@@ -6,6 +6,7 @@ const Conversation            = require('../models/Conversation')
 const Message                 = require('../models/Message')
 const PlantillaWhatsApp       = require('../models/PlantillaWhatsApp')
 const { MESSAGE_DIRECTION }   = require('../config/constants')
+const audit                   = require('./audit.service')
 
 let io = null
 let schedulerStarted = false
@@ -98,6 +99,7 @@ async function ejecutarBroadcast(broadcastId) {
   const tenant = await Tenant.findById(broadcast.tenantId).lean()
   if (!tenant?.metaApi?.enabled || !tenant?.metaApi?.accessToken) {
     await Broadcast.findByIdAndUpdate(broadcastId, { estado: 'error' })
+    audit.error(broadcast.tenantId, tenant?.nombre, `Broadcast "${broadcast.nombre}": Meta API no habilitada, no se pudo enviar`)
     return
   }
 
@@ -106,6 +108,8 @@ async function ejecutarBroadcast(broadcastId) {
     await Broadcast.findByIdAndUpdate(broadcastId, { estado: 'completada', completadaAt: new Date() })
     return
   }
+
+  audit.info(broadcast.tenantId, tenant.nombre, `Broadcast "${broadcast.nombre}" iniciado — ${destinatarios.length} destinatarios`)
 
   const provider  = require('./message-provider.service')
   const plantilla = await PlantillaWhatsApp.findById(broadcast.plantillaId).lean()
@@ -138,11 +142,13 @@ async function ejecutarBroadcast(broadcastId) {
           await BroadcastDestinatario.findByIdAndUpdate(dest._id, {
             estado: 'fallido', errorMsg: result?.error || 'Error desconocido',
           })
+          audit.error(broadcast.tenantId, tenant.nombre, `Broadcast "${broadcast.nombre}" → ${dest.phone}: ${result?.error || 'Error desconocido'}`)
         }
       } catch (e) {
         fallidos++
         await BroadcastDestinatario.findByIdAndUpdate(dest._id, { estado: 'fallido', errorMsg: e.message })
         console.error(`Broadcast ${broadcastId} → ${dest.phone}: ${e.message}`)
+        audit.error(broadcast.tenantId, tenant.nombre, `Broadcast "${broadcast.nombre}" → ${dest.phone}: ${e.message}`)
       }
     }))
 
@@ -155,6 +161,8 @@ async function ejecutarBroadcast(broadcastId) {
   })
   emitProgress(broadcastId, { enviados, fallidos, estado: 'completada', destinatarios: destinatarios.length })
   console.log(`Broadcast ${broadcastId} completado: ${enviados} enviados, ${fallidos} fallidos`)
+  audit[fallidos > 0 ? 'warn' : 'success'](broadcast.tenantId, tenant.nombre,
+    `Broadcast "${broadcast.nombre}" completado: ${enviados} enviados, ${fallidos} fallidos`)
 }
 
 function emitProgress(broadcastId, data) {

@@ -13,12 +13,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// Paleta vivida y muy diferenciable
-const COLORES = [
-  '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
-  '#14B8A6', '#A855F7',
-]
+// Un solo color para todos los vendedores — con paleta por vendedor, filtrar por uno
+// específico podía tocarte un color poco visible en el mapa (ej. amarillo claro).
+// Mono-color: se ve igual de bien sin importar a quién filtres.
+const COLOR_UNICO = '#DC2626'
 
 const ZONAS_COORDS = {
   'CENTRO CUCUTA':    [[7.9005,-72.5110],[7.9005,-72.4950],[7.8880,-72.4950],[7.8880,-72.5110]],
@@ -79,10 +77,10 @@ export default function MapaPage() {
   const clientes    = cData?.customers || []
   const conCoords   = clientes.filter(c => c.lat && c.lng)
 
-  // Mapa color por vendedor ID
+  // Mapa color por vendedor ID — todos el mismo color (ver COLOR_UNICO)
   const coloresMap = useMemo(() => {
     const m = {}
-    vendedores.forEach((v, i) => { m[v._id] = COLORES[i % COLORES.length] })
+    vendedores.forEach(v => { m[v._id] = COLOR_UNICO })
     return m
   }, [vendedores])
 

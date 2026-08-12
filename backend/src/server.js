@@ -4,11 +4,14 @@ require('express-async-errors')
 // whatsapp-web.js re-inyecta scripts en cada navegación interna de WhatsApp Web (Client.js:inject) —
 // si dos navegaciones se solapan, esa reinyección lanza "Execution context was destroyed" sin que
 // nada lo capture, y por defecto Node mata todo el proceso (todas las líneas, toda la API).
+const audit = require('./services/audit.service')
 process.on('unhandledRejection', (reason) => {
   console.error('[UnhandledRejection]', reason?.message || reason)
+  audit.system(`Unhandled rejection: ${reason?.message || reason}`)
 })
 process.on('uncaughtException', (err) => {
   console.error('[UncaughtException]', err?.message || err)
+  audit.system(`Uncaught exception: ${err?.message || err}`)
 })
 
 const express = require('express')
@@ -143,6 +146,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: 'ID inválido' })
   }
   console.error(err.message)
+  audit.error(null, 'Sistema', `Error en ${req.method} ${req.originalUrl}: ${err.message}`)
   res.status(err.status || 500).json({ error: err.message || 'Error interno' })
 })
 

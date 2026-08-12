@@ -14,6 +14,7 @@ const Plantilla  = require('../models/PlantillaWhatsApp')
 const Broadcast             = require('../models/Broadcast')
 const BroadcastDestinatario = require('../models/BroadcastDestinatario')
 const { parseIncomingWebhook } = require('../services/meta-api.service')
+const audit = require('../services/audit.service')
 
 // Meta manda estos nombres de estado en el evento; PAUSED/UNPAUSED no cambian
 // nuestro enum local, se ignoran (el estado ya aprobado se mantiene).
@@ -126,6 +127,7 @@ router.post('/', async (req, res) => {
     })
     if (!tenant) {
       console.warn(`[META-WEBHOOK] No se encontro tenant para phoneNumberId: ${phoneNumberId}`)
+      audit.warn(null, 'Sistema', `Webhook Meta: no se encontró línea para phoneNumberId ${phoneNumberId}`)
       return
     }
 
@@ -136,10 +138,12 @@ router.post('/', async (req, res) => {
     if (tenant.metaApi.appSecret) {
       if (!firmaValida(req.rawBody, signatureHeader, tenant.metaApi.appSecret)) {
         console.warn(`[META-WEBHOOK] ⚠️ Firma invalida — evento descartado (tenant: ${tenant.nombre})`)
+        audit.error(tenant._id, tenant.nombre, `Webhook Meta: firma inválida — evento descartado`)
         return
       }
     } else {
       console.warn(`[META-WEBHOOK] ⚠️ Sin App Secret configurado para ${tenant.nombre} — firma no verificada`)
+      audit.warn(tenant._id, tenant.nombre, `Webhook Meta sin App Secret configurado — firma no verificada`)
     }
 
     // Confirmaciones de entrega/lectura/fallo de mensajes ya enviados
@@ -149,6 +153,11 @@ router.post('/', async (req, res) => {
         // un envío (ej. plantilla de prueba) si no existía un Message guardado con ese id.
         const detalle = st.errors?.map(e => `${e.code}: ${e.title} — ${e.message || ''}`).join(' | ')
         console.log(`[META-WEBHOOK] Estado de ${st.id}: ${st.status}${detalle ? ` (${detalle})` : ''}`)
+        if (st.status === 'failed') {
+          audit.error(tenant._id, tenant.nombre, `Envío falló (${st.id}): ${detalle || 'sin detalle'}`)
+        } else if (st.status === 'sent' || st.status === 'delivered') {
+          audit.msg(tenant._id, tenant.nombre, `Estado de mensaje ${st.id}: ${st.status}`)
+        }
         const mapped = STATUS_MAP[st.status]
         if (!mapped) continue
         await Message.findOneAndUpdate({ whatsappMsgId: st.id }, { status: mapped }).catch(() => {})
@@ -161,6 +170,7 @@ router.post('/', async (req, res) => {
     if (!parsed || !parsed.text) return
 
     console.log(`[META-WEBHOOK] Mensaje de ${parsed.phone} → tenant: ${tenant.nombre} | "${parsed.text}"`)
+    audit.msg(tenant._id, tenant.nombre, `📩 Mensaje de ${parsed.phone}: "${parsed.text.substring(0, 80)}"`, { phone: parsed.phone })
 
     // Delegar al mismo handler de mensajes que usa Baileys
     // Inyectamos el io desde el servidor principal via req.app
@@ -170,6 +180,7 @@ router.post('/', async (req, res) => {
 
   } catch (err) {
     console.error('[META-WEBHOOK] Error procesando mensaje:', err.message)
+    audit.error(null, 'Sistema', `Webhook Meta: error procesando evento — ${err.message}`)
   }
 })
 

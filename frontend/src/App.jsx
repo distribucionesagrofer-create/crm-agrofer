@@ -30,7 +30,6 @@ import ClientesPage from './pages/ClientesPage'
 import BroadcastPage from './pages/BroadcastPage'
 import BroadcastDetailPage from './pages/BroadcastDetailPage'
 import LeadsPage from './pages/LeadsPage'
-import NotificacionesPage from './pages/NotificacionesPage'
 import FlujosPage from './pages/FlujosPage'
 import PlantillasWhatsAppPage from './pages/PlantillasWhatsAppPage'
 import FlujoEditorPage from './pages/FlujoEditorPage'
@@ -80,7 +79,6 @@ export default function App() {
           <Route path="analisis" element={<AnalisisComercialPage />} />
           <Route path="productos" element={<ProductosCatalogoPage />} />
           <Route path="ia-config" element={<AIConfigPage />} />
-          <Route path="notificaciones" element={<NotificacionesPage />} />
           <Route path="knowledge" element={<KnowledgePage />} />
           <Route path="quick-replies" element={<QuickRepliesPage />} />
           <Route path="automations" element={<AutomationsPage />} />

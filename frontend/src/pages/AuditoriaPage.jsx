@@ -17,6 +17,9 @@ const STATUS_CONFIG = {
   qr_ready:     { label: 'Esperando QR', color: 'bg-amber-400',  icon: Clock },
   connecting:   { label: 'Conectando',   color: 'bg-blue-400',   icon: RefreshCw },
   disconnected: { label: 'Desconectado', color: 'bg-gray-500',   icon: WifiOff },
+  // Tiene sesión guardada pero no está conectada ahora mismo — normal en líneas de
+  // Estados Rotación (se conectan solo para publicar y se desconectan). No es un error.
+  synced:       { label: 'Sincronizada', color: 'bg-teal-500',   icon: CheckCircle2 },
 }
 
 function fmtTime(isoStr) {
@@ -51,13 +54,17 @@ function LogEntry({ entry }) {
 }
 
 function LineCard({ line }) {
-  const cfg = STATUS_CONFIG[line.status] || STATUS_CONFIG.disconnected
+  // Desconectada pero con sesión guardada — mostrar "Sincronizada", no "Desconectado"
+  // (implica que algo está roto cuando en realidad es el comportamiento esperado de
+  // Estados Rotación: se conecta solo para publicar y luego se desconecta).
+  const isSyncedOnly = line.status === 'disconnected' && line.synced
+  const cfg = isSyncedOnly ? STATUS_CONFIG.synced : (STATUS_CONFIG[line.status] || STATUS_CONFIG.disconnected)
   const Icon = cfg.icon
   const isQr = line.status === 'qr_ready'
   const isConn = line.status === 'connected'
   const isMeta = line.canal === 'meta'
   return (
-    <div className={`rounded-xl border p-4 ${isMeta ? 'border-blue-500/30 bg-blue-500/5' : isConn ? 'border-green-500/30 bg-green-500/5' : isQr ? 'border-amber-400/30 bg-amber-400/5 animate-pulse' : 'border-gray-700 bg-gray-800/40'}`}>
+    <div className={`rounded-xl border p-4 ${isMeta ? 'border-blue-500/30 bg-blue-500/5' : isConn ? 'border-green-500/30 bg-green-500/5' : isQr ? 'border-amber-400/30 bg-amber-400/5 animate-pulse' : isSyncedOnly ? 'border-teal-500/20 bg-teal-500/5' : 'border-gray-700 bg-gray-800/40'}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isMeta ? 'bg-blue-500' : cfg.color}`} />
@@ -74,6 +81,7 @@ function LineCard({ line }) {
           isConn  ? 'bg-green-500/20 text-green-400' :
           isQr    ? 'bg-amber-500/20 text-amber-400' :
           line.status === 'connecting' ? 'bg-blue-500/20 text-blue-400' :
+          isSyncedOnly ? 'bg-teal-500/20 text-teal-400' :
           'bg-gray-700 text-gray-400'
         }`}>
           <Icon size={11} className={line.status === 'connecting' ? 'animate-spin' : ''} />
