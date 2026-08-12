@@ -51,16 +51,21 @@ function makeIcon(color, size, selected) {
   })
 }
 
-// Volar al centroide de los clientes del vendedor seleccionado
+// Encuadra TODOS los clientes del vendedor seleccionado — antes volaba a un punto fijo
+// con zoom fijo (14), y si los clientes de ese vendedor están regados en un territorio
+// grande, ese punto medio podía caer en tierra vacía sin ningún cliente cerca. Con
+// fitBounds el mapa se ajusta solo (haciendo zoom out si hace falta) para que todos los
+// puntos queden visibles a la vez.
 function FlyToVendor({ clientes }) {
   const map = useMap()
   useEffect(() => {
     if (!clientes.length) return
-    const lats = clientes.map(c => c.lat)
-    const lngs = clientes.map(c => c.lng)
-    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2
-    const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2
-    map.flyTo([centerLat, centerLng], 14, { duration: 1.2 })
+    if (clientes.length === 1) {
+      map.flyTo([clientes[0].lat, clientes[0].lng], 15, { duration: 1.2 })
+      return
+    }
+    const bounds = L.latLngBounds(clientes.map(c => [c.lat, c.lng]))
+    map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2, maxZoom: 15 })
   }, [clientes])
   return null
 }
