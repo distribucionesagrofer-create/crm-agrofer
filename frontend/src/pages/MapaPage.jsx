@@ -65,6 +65,19 @@ function FlyToVendor({ clientes }) {
   return null
 }
 
+// Volar directo al cliente seleccionado en la lista — antes, hacer clic en un cliente
+// solo abría su ficha, el mapa se quedaba en el centro de TODOS los clientes del
+// vendedor (que puede caer lejos si están dispersos, dando la sensación de que
+// "manda a cualquier lado").
+function FlyToCliente({ cliente }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!cliente?.lat || !cliente?.lng) return
+    map.flyTo([cliente.lat, cliente.lng], 17, { duration: 1 })
+  }, [cliente?._id])
+  return null
+}
+
 function HeatLayer({ clientes, coloresMap }) {
   return clientes.filter(c => c.lat && c.lng).map(c => {
     const color = coloresMap[c.vendedorId?._id || c.vendedorId] || '#6b7280'
@@ -298,9 +311,12 @@ export default function MapaPage() {
             </LayersControl>
 
             {/* Fly automático cuando se selecciona un vendedor */}
-            {vendedorActivo && clientesFiltrados.length > 0 && (
+            {vendedorActivo && clientesFiltrados.length > 0 && !clienteDetalle && (
               <FlyToVendor clientes={clientesFiltrados} />
             )}
+
+            {/* Fly directo al cliente que se clickeó en la lista */}
+            {clienteDetalle && <FlyToCliente cliente={clienteDetalle} />}
 
             {/* Heat layer */}
             {mostrarHeat && <HeatLayer clientes={conCoords} coloresMap={coloresMap} />}
