@@ -107,7 +107,10 @@ export default function MapaPage() {
 
   const vendedores  = (vData?.vendedores || []).filter(v => v.slug !== 'linea-principal' && v.slug !== 'mercadeo-y-publicidad' && v.activo !== false)
   const clientes    = cData?.customers || []
-  const conCoords   = clientes.filter(c => c.lat && c.lng)
+  // Memoizado — si no, es una referencia nueva en cada render y el fitBounds de
+  // FlyToVendor (que depende de esta lista) se re-dispararía constantemente
+  // (ej. al escribir en el buscador), moviendo el mapa solo sin que el usuario pida nada.
+  const conCoords   = useMemo(() => clientes.filter(c => c.lat && c.lng), [clientes])
 
   // Mapa color por vendedor ID — todos el mismo color (ver COLOR_UNICO)
   const coloresMap = useMemo(() => {
@@ -318,9 +321,12 @@ export default function MapaPage() {
               </LayersControl.BaseLayer>
             </LayersControl>
 
-            {/* Fly automático cuando se selecciona un vendedor */}
-            {vendedorActivo && clientesFiltrados.length > 0 && !clienteDetalle && (
-              <FlyToVendor clientes={clientesFiltrados} />
+            {/* Encuadre automático: todos los clientes del vendedor activo, o —al volver
+                a "Todos los vendedores"— todos los clientes ubicados en general. Antes
+                solo pasaba con un vendedor seleccionado; volver a "Todos" dejaba el mapa
+                en el zoom/posición que hubiera quedado, sin regresar a la vista general. */}
+            {!clienteDetalle && (vendedorActivo ? clientesFiltrados : conCoords).length > 0 && (
+              <FlyToVendor clientes={vendedorActivo ? clientesFiltrados : conCoords} />
             )}
 
             {/* Fly directo al cliente que se clickeó en la lista */}
