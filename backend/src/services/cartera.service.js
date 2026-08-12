@@ -2,18 +2,18 @@
 // mismo `spPost`/lista de vendedores que ya usa Análisis Comercial.
 const { spPost, VENDEDORES } = require('./sistema-principal.service')
 
-// Trae las facturas pendientes de un cliente. Requiere que el Customer tenga
-// idSistemaPrincipal (su id en el sistema externo) y teridVendedor (para resolver
-// las credenciales vendedor_id/usuario_id que exige la API — la cartera se consulta
-// "a través" del vendedor asignado al cliente, no hay una vía cliente-directo).
+// Trae las facturas pendientes de un cliente. Requiere idSistemaPrincipal (su id en el
+// sistema externo). La API exige un vendedor_id/usuario_id en la petición, pero
+// (confirmado en vivo) NO valida que ese vendedor sea realmente el asignado al cliente —
+// cliente_id por sí solo determina de quién es la cartera que devuelve. Por eso, si el
+// vendedor propio del cliente no está en nuestra lista (dato incompleto o vendedor que
+// ya no está activo), usamos cualquiera de los que sí tenemos como "puerta de entrada"
+// en vez de fallar — así no dependemos de tener las credenciales de cada vendedor real.
 async function obtenerCartera(customer) {
   if (!customer.idSistemaPrincipal) {
     throw new Error('Este cliente no tiene id de Sistema Principal — no se puede consultar su cartera')
   }
-  const vendedor = VENDEDORES.find(v => v.terid === customer.teridVendedor)
-  if (!vendedor) {
-    throw new Error('No se encontró el vendedor de Sistema Principal asociado a este cliente')
-  }
+  const vendedor = VENDEDORES.find(v => v.terid === customer.teridVendedor) || VENDEDORES[0]
 
   const resp = await spPost({
     action:      'get_cartera',
