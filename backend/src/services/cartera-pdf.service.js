@@ -66,7 +66,7 @@ function generarCarteraPDF(customer, { facturas, total }) {
     for (const f of facturas) {
       if (y > 740) { doc.addPage(); y = 50 }
       const vencida = f.diasVcto > 0
-      doc.fillColor('#111827').text(f.documento, colX.doc + 6, y + 6, { width: 130 })
+      doc.font('Helvetica').fillColor('#111827').text(f.documento, colX.doc + 6, y + 6, { width: 130 })
       doc.fillColor(GRIS).text(fmtFecha(f.fecha), colX.fecha, y + 6)
       doc.fillColor(GRIS).text(fmtFecha(f.vence), colX.vence, y + 6)
       doc.fillColor(vencida ? ROJO : GRIS).font(vencida ? 'Helvetica-Bold' : 'Helvetica')
