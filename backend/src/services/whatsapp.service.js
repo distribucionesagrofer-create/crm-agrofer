@@ -5,7 +5,7 @@ const Lead = require('../models/Lead')
 const Conversation = require('../models/Conversation')
 const Message = require('../models/Message')
 const Tenant = require('../models/Tenant')
-const { orchestrate }        = require('./bot-orchestrator.service')
+const { orchestrate, checkImmediateEscalation } = require('./bot-orchestrator.service')
 const { detectPromptInjection, sanitizeInput } = require('./security.service')
 const { WHATSAPP_STATUS, MESSAGE_DIRECTION } = require('../config/constants')
 const { ejecutarFlujo } = require('./flow.service')
@@ -1806,7 +1806,11 @@ function getClient(vendedorId) {
 async function handleIncomingMetaMessage(tenant, parsed, io) {
   const { sendText, downloadMedia } = require('./meta-api.service')
   const tenantId = tenant._id.toString()
-  const { phone, text, contactName, messageId, mediaId, mediaCaption, type } = parsed
+  const { phone, contactName, messageId, mediaId, mediaCaption, type } = parsed
+  // Sanitizar apenas entra — antes esto solo pasaba en el canal viejo de whatsapp-web.js;
+  // el canal Meta (el único con tráfico real) metía el texto crudo del webhook directo
+  // al historial guardado y al prompt de la IA, sin ningún filtro.
+  const text = sanitizeInput(parsed.text || '')
   // Declarada aquí (no dentro del try) para que el catch de abajo pueda marcar
   // needsAttention si el error ocurre después de haber identificado la conversación.
   let conversation = null
@@ -1945,8 +1949,16 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
     // "catálogo", captura de datos, etc.) — antes esto SOLO corría en el canal viejo de
     // whatsapp-web.js; la línea principal (Meta API, la única con tráfico real hoy)
     // nunca lo ejecutaba, así que cualquier flujo activo no hacía absolutamente nada.
+    //
+    // Un flujo (o una captura de dato pendiente) NUNCA debe poder tragarse un mensaje
+    // que en realidad pedía escalar a un humano — ej. "el producto llegó dañado, quiero
+    // ver el catálogo" contiene la keyword "catálogo", y sin este chequeo el flujo
+    // respondía el catálogo y el reclamo se perdía sin escalar. Se revisa la misma
+    // regla dura que usa el orquestador ANTES de dejar correr cualquier flujo.
+    const escalacionPrevia = text ? checkImmediateEscalation(text, conversation.botState || {}, tenant) : { escalar: false }
+
     let pasarAIAFlujo = true
-    if (text) {
+    if (text && !escalacionPrevia.escalar) {
       try {
         const resultadoFlujo = await ejecutarFlujo({
           tenantId,
@@ -1974,6 +1986,13 @@ async function handleIncomingMetaMessage(tenant, parsed, io) {
 
     // Ejecutar orquestador si IA esta activa
     const aiBlocked = !tenant.ai?.enabled || !tenant.ai?.autoReply || !conversation.aiEnabled
+    const injectionDetected = detectPromptInjection(text)
+    if (injectionDetected) {
+      console.warn(`[META-HANDLER] Posible prompt injection de ${phone} — se omite la IA, queda para atención humana`)
+      await Conversation.findByIdAndUpdate(conversation._id, { needsAttention: true })
+      io?.to(`vendedor:${tenantId}`).emit('conversation:needs-attention', { conversationId: conversation._id })
+      return
+    }
     if (aiBlocked || !text) return
 
     const contacto = contactType === 'customer'

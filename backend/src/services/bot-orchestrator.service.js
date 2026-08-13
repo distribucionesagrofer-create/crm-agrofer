@@ -500,4 +500,4 @@ async function orchestrate({ tenantId, conversationId, phone, incomingText, tena
   return aiResult
 }
 
-module.exports = { orchestrate, detectIntent }
+module.exports = { orchestrate, detectIntent, checkImmediateEscalation }

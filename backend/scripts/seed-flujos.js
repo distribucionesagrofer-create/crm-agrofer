@@ -1,3 +1,12 @@
+// ⚠️ NO CORRER SIN REVISAR — estos 6 flujos de ejemplo compiten con lo que la IA ya
+// hace mejor hoy (ej. el Flujo 2 "Consulta de precios" intercepta cualquier mensaje con
+// "precio"/"costo" y manda una respuesta generica pidiendo producto+ciudad, en vez de
+// dejar que el bot use `consultar_producto` y responda con precios reales de una vez).
+// El unico flujo que SI esta en produccion hoy es "Catalogo AGROFER" (ver
+// seed-flujo-catalogo.js en backend/src/scripts/). Este script no borra nada si ya
+// existen flujos guardados (ver chequeo abajo), asi que no corre por accidente — pero si
+// se ejecuta a proposito con ALLOW_SEED_RESET=true sobre una base vacia, revisa primero
+// cada flujo uno por uno contra lo que la IA ya cubre antes de dejarlos todos activos.
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const mongoose = require('mongoose')
 
