@@ -45,6 +45,10 @@ async function consultarProducto({ consulta }) {
         disponible: p.existencia > 0,
         existencia: p.existencia,
         unidad:     p.unidad,
+        // El nombre trae texto tipo "INVECRYL 500 X 750 GRS BOLSA" donde el 500 es parte
+        // del código comercial y el 750 es el peso real — sin este campo aparte, el
+        // modelo confundía cuál número era el peso (ej. respondía "500 gramos").
+        pesoGramos: p.peso || null,
       })),
     }
   } catch (e) {
@@ -62,7 +66,7 @@ const TOOLS = {
       type: 'function',
       function: {
         name: 'consultar_producto',
-        description: 'Busca productos reales en el catálogo de AGROFER por nombre, código o referencia — precio, disponibilidad, marca y unidad de venta. Úsala SIEMPRE que el cliente pregunte por precio, disponibilidad o características de un producto; nunca inventes esos datos.',
+        description: 'Busca productos reales en el catálogo de AGROFER por nombre, código o referencia — precio, disponibilidad, marca, unidad de venta y peso en gramos (pesoGramos). El nombre del producto puede incluir números que NO son el peso (ej. "INVECRYL 500 X 750 GRS BOLSA" — el 500 es parte del código comercial, el peso real está en pesoGramos: 750). Usa siempre pesoGramos si el cliente pregunta por el tamaño/peso, nunca lo adivines del nombre. Úsala SIEMPRE que el cliente pregunte por precio, disponibilidad o características de un producto; nunca inventes esos datos.',
         parameters: {
           type: 'object',
           properties: {
